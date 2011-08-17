@@ -1,10 +1,14 @@
 package org.apache.hedwig.jms;
 
+import java.net.MalformedURLException;
+import java.net.URL;
+
 import javax.jms.Destination;
 import javax.jms.JMSException;
 import javax.jms.Message;
 import javax.jms.MessageProducer;
 
+import org.apache.hedwig.client.conf.ClientConfiguration;
 import org.apache.hedwig.client.netty.HedwigClient;
 import org.apache.hedwig.client.netty.HedwigPublisher;
 import org.apache.hedwig.jms.administered.HedwigSession;
@@ -12,9 +16,22 @@ import org.apache.hedwig.jms.administered.HedwigSession;
 public abstract class HedwigMessageProducer implements MessageProducer {
 	
 	protected HedwigSession hedwigSession;
+	private HedwigClient hedwigClient;
 	
 	public HedwigMessageProducer(HedwigSession hedwigSession) {
 		this.hedwigSession = hedwigSession;
+		ClientConfiguration config = new ClientConfiguration();
+		try {
+			config.loadConf(new URL(null, "classpath://hedwig-client.cfg", new FileURLHandler(ClassLoader
+			        .getSystemClassLoader())));
+			this.hedwigClient = new HedwigClient(config);
+		} catch (MalformedURLException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (org.apache.commons.configuration.ConfigurationException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
 	}
 
 	@Override
@@ -112,5 +129,9 @@ public abstract class HedwigMessageProducer implements MessageProducer {
 		// TODO Auto-generated method stub
 
 	}
+
+	public HedwigClient getHedwigClient() {
+	    return hedwigClient;
+    }
 
 }

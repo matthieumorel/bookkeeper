@@ -1,6 +1,11 @@
 package org.apache.hedwig.jms.administered;
 
 import java.io.Serializable;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
 
 import javax.jms.BytesMessage;
 import javax.jms.Destination;
@@ -21,28 +26,63 @@ import javax.jms.TextMessage;
 import javax.jms.Topic;
 import javax.jms.TopicSubscriber;
 
-import org.apache.hedwig.client.exceptions.InvalidSubscriberIdException;
-import org.apache.hedwig.client.netty.HedwigClient;
-import org.apache.hedwig.exceptions.PubSubException.ClientAlreadySubscribedException;
-import org.apache.hedwig.exceptions.PubSubException.CouldNotConnectException;
-import org.apache.hedwig.exceptions.PubSubException.ServiceDownException;
 import org.apache.hedwig.jms.HedwigMessageConsumer;
 import org.apache.hedwig.jms.message.HedwigJMSTextMessage;
-import org.apache.hedwig.jms.util.ClientIdGenerator;
-import org.apache.hedwig.protocol.PubSubProtocol.SubscribeRequest.CreateOrAttach;
+import org.apache.hedwig.jms.util.SessionMessageQueue;
+import org.apache.hedwig.jms.util.SessionMessageQueue.MessageWithSubscriberId;
 
 import com.google.protobuf.ByteString;
 
 public class HedwigSession implements Session {
 
 	protected HedwigConnection connection;
+	BlockingQueue<org.apache.hedwig.protocol.PubSubProtocol.Message> unacknowledgedMessages = new LinkedBlockingQueue<org.apache.hedwig.protocol.PubSubProtocol.Message>();
+	SessionMessageQueue sessionMessageQueue;
+	SessionControlThread sessionControlThread;
+	Map<ByteString, MessageListener> listeners = new HashMap<ByteString, MessageListener>();
+	Map<ByteString, HedwigMessageConsumer> consumers = new HashMap<ByteString, HedwigMessageConsumer>();
 
 	public HedwigSession(HedwigConnection connection) {
 		this.connection = connection;
+		this.sessionMessageQueue = new SessionMessageQueue();
+		this.sessionControlThread = new SessionControlThread(sessionMessageQueue, this);
 	}
-	
+
 	public HedwigConnection getHedwigConnection() {
 		return connection;
+	}
+
+	public void addConsumer(ByteString subscriberId, HedwigMessageConsumer consumer) {
+		consumers.put(subscriberId, consumer);
+		sessionMessageQueue.addConsumer(subscriberId);
+	}
+
+	public void addListener(ByteString subscriberId, MessageListener listener) {
+		if (!sessionControlThread.isAlive()) {
+			sessionControlThread.start();
+		}
+		listeners.put(subscriberId, listener);
+	}
+
+	public Map<ByteString, MessageListener> getListeners() {
+		return listeners;
+	}
+
+	public boolean offerReceivedMessage(org.apache.hedwig.protocol.PubSubProtocol.Message message,
+	        ByteString subscriberId) {
+		return sessionMessageQueue.offerReceivedMessage(subscriberId, message);
+	}
+
+	public MessageWithSubscriberId takeNextMessage() {
+		return sessionMessageQueue.blockingRetrieveAny();
+	}
+
+	public MessageWithSubscriberId takeNextMessage(ByteString subscriberId) {
+		return sessionMessageQueue.retrieve(subscriberId, true, 0, null);
+	}
+
+	public MessageWithSubscriberId pollNextMessage(ByteString subscriberId, long time, TimeUnit timeUnit) {
+		return sessionMessageQueue.retrieve(subscriberId, false, time, timeUnit);
 	}
 
 	@Override
@@ -100,8 +140,11 @@ public class HedwigSession implements Session {
 		if (!(destination instanceof Topic)) {
 			throw new UnsupportedOperationException("Hedwig currently only implements topic subscribers");
 		}
-			ByteString topicName = ByteString.copyFromUtf8(((Topic) destination).getTopicName());
-			return new HedwigMessageConsumer(this, topicName);
+		ByteString topicName = ByteString.copyFromUtf8(((Topic) destination).getTopicName());
+
+		HedwigMessageConsumer consumer = new HedwigMessageConsumer(this, topicName);
+		sessionMessageQueue.addConsumer(consumer.getSubscriberId());
+		return consumer;
 	}
 
 	@Override

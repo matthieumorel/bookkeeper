@@ -29,7 +29,7 @@ public class HedwigJMSBaseTest {
 	private String HOSTPORT = "127.0.0.1:2181";
 	private List<BookieServer> bs = new ArrayList<BookieServer>();
 	private BookKeeper bkc;
-	private File hedwigConfigFile;
+	protected File hedwigConfigFile;
 	List<File> tmpDirs = new ArrayList<File>();
 	private String hedwigParams = "default_server_host=localhost:4080\n"
 	        + "zookeeper_connection_string=localhost:2181\n" + "zookeeper_connection_timeout=120000\n"
@@ -58,6 +58,7 @@ public class HedwigJMSBaseTest {
 
 		ClientBase.waitForServerUp(HOSTPORT, 100000);
 
+		System.out.println("Zookeeper server up and running!");
 		// LOG.debug("Server up: " + b);
 
 		// create a zookeeper client
@@ -82,6 +83,7 @@ public class HedwigJMSBaseTest {
 		zkc.close();
 		bkc = new BookKeeper("127.0.0.1");
 		Thread.sleep(4000);
+		System.out.println("added bookies!");
 
 	}
 
