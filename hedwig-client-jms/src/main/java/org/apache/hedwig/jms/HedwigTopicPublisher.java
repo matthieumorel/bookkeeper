@@ -69,7 +69,7 @@ public class HedwigTopicPublisher extends HedwigMessageProducer implements Topic
 		// zero to indicate that the message does not expire.
 		message.setJMSExpiration(timeToLive == 0 ? 0 : message.getJMSTimestamp() + timeToLive);
 		try {
-	        hedwigSession.getHedwigConnection().getHedwigClient().getPublisher().publish(ByteString.copyFromUtf8(topic.getTopicName()),
+	        getHedwigClient().getPublisher().publish(ByteString.copyFromUtf8(topic.getTopicName()),
 	                ((HedwigJMSMessage) message).getHedwigMessage());
         } catch (CouldNotConnectException e) {
 	        JMSUtils.createJMSException("Cannot publish message: cannot connect to broker", e);

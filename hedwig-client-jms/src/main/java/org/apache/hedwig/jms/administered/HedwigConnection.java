@@ -29,39 +29,36 @@ import org.apache.hedwig.client.conf.ClientConfiguration;
 import org.apache.hedwig.client.netty.HedwigClient;
 import org.apache.hedwig.jms.HedwigMessageConsumer;
 
+/**
+ * 
+ * <u>NOTE:</u>
+ * The JMS spec indicate that a Connection encapsulates a connection to a JMS
+ * provider, typically a TCP connection.
+ * 
+ * However, a connection may have multiple subscribers, which receive
+ * <b>independent</b> copies of messages, that can be acknowledged
+ * independently. In order to satisfy this behaviour, a JMS HedwigConnection
+ * object may actually contain <b>several</b> hedwig clients, each maintaining
+ * its connection to the JMS provider.
+ * 
+ * 
+ */
 public abstract class HedwigConnection implements Connection {
 
-	protected HedwigClient hedwigClient;
+	// protected HedwigClient hedwigClient;
 	boolean started;
 	List<HedwigMessageConsumer> consumers = new ArrayList<HedwigMessageConsumer>();
-	ThreadGate startedGate = new ThreadGate();	
+	ThreadGate startedGate = new ThreadGate();
 
 	public HedwigConnection() {
-		ClientConfiguration config = new ClientConfiguration();
-		try {
-			config.loadConf(new URL(null, "classpath://hedwig-client.cfg", new Handler(ClassLoader
-			        .getSystemClassLoader())));
-			this.hedwigClient = new HedwigClient(config);
-		} catch (ConfigurationException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (MalformedURLException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-	}
-
-	public HedwigClient getHedwigClient() {
-		return hedwigClient;
 	}
 
 	public void waitUntilStarted() throws InterruptedException {
 		startedGate.await();
 	}
-	
+
 	@Override
 	public void close() throws JMSException {
-//		startedGate.close();
 	}
 
 	public void addMessageConsumer(HedwigMessageConsumer consumer) {
@@ -133,21 +130,6 @@ public abstract class HedwigConnection implements Connection {
 	@Override
 	public synchronized void stop() throws JMSException {
 		startedGate.close();
-	}
-
-	public class Handler extends URLStreamHandler {
-		/** The classloader to find resources from. */
-		private final ClassLoader classLoader;
-
-		public Handler(ClassLoader classLoader) {
-			this.classLoader = classLoader;
-		}
-
-		@Override
-		protected URLConnection openConnection(URL u) throws IOException {
-			final URL resourceUrl = classLoader.getResource(u.getPath());
-			return resourceUrl.openConnection();
-		}
 	}
 
 	// from "java concurrency in practice"...

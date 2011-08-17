@@ -46,13 +46,15 @@ public class TestSimplePubSub extends HedwigJMSBaseTest {
 
 	@Test
 	public void testTopicProducerConsumer() throws Exception {
+		
+
 
 		ClientConfiguration clientConf = new ClientConfiguration();
-		clientConf.loadConf(new File(System.getProperty("user.dir") + "/src/test/java/hedwig-client.cfg").toURI()
+		clientConf.loadConf(hedwigConfigFile.toURI()
 		        .toURL());
 
 		ServerConfiguration serverConf = new ServerConfiguration();
-		serverConf.loadConf(new File(System.getProperty("user.dir") + "/src/test/java/hedwig-client.cfg").toURI()
+		serverConf.loadConf(hedwigConfigFile.toURI()
 		        .toURL());
 
 		hedwigServer = new PubSubServer(serverConf);
@@ -100,11 +102,11 @@ public class TestSimplePubSub extends HedwigJMSBaseTest {
 	@Test
 	public void testNoDeliveryUntilConnectionStarted() throws Exception, MalformedURLException {
 		ClientConfiguration clientConf = new ClientConfiguration();
-		clientConf.loadConf(new File(System.getProperty("user.dir") + "/src/test/java/hedwig-client.cfg").toURI()
+		clientConf.loadConf(hedwigConfigFile.toURI()
 		        .toURL());
 
 		ServerConfiguration serverConf = new ServerConfiguration();
-		serverConf.loadConf(new File(System.getProperty("user.dir") + "/src/test/java/hedwig-client.cfg").toURI()
+		serverConf.loadConf(hedwigConfigFile.toURI()
 		        .toURL());
 
 		hedwigServer = new PubSubServer(serverConf);
