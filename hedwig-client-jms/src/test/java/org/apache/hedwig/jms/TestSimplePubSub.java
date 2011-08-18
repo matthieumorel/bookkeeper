@@ -1,9 +1,10 @@
 package org.apache.hedwig.jms;
 
-import java.io.File;
 import java.net.MalformedURLException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -17,28 +18,14 @@ import javax.jms.TopicConnectionFactory;
 import javax.jms.TopicPublisher;
 import javax.jms.TopicSession;
 import javax.jms.TopicSubscriber;
-import javax.naming.ConfigurationException;
 import javax.naming.Context;
 import javax.naming.InitialContext;
 
-import junit.framework.AssertionFailedError;
-
-import org.apache.hedwig.client.api.MessageHandler;
 import org.apache.hedwig.client.conf.ClientConfiguration;
-import org.apache.hedwig.client.exceptions.InvalidSubscriberIdException;
-import org.apache.hedwig.client.netty.HedwigClient;
-import org.apache.hedwig.client.netty.HedwigPublisher;
-import org.apache.hedwig.client.netty.HedwigSubscriber;
-import org.apache.hedwig.exceptions.PubSubException;
-import org.apache.hedwig.protocol.PubSubProtocol;
 import org.apache.hedwig.server.common.ServerConfiguration;
 import org.apache.hedwig.server.netty.PubSubServer;
-import org.jboss.netty.logging.InternalLoggerFactory;
-import org.jboss.netty.logging.Log4JLoggerFactory;
 import org.junit.Assert;
 import org.junit.Test;
-
-import com.google.protobuf.ByteString;
 
 public class TestSimplePubSub extends HedwigJMSBaseTest {
 
@@ -46,16 +33,12 @@ public class TestSimplePubSub extends HedwigJMSBaseTest {
 
 	@Test
 	public void testTopicProducerConsumer() throws Exception {
-		
-
 
 		ClientConfiguration clientConf = new ClientConfiguration();
-		clientConf.loadConf(hedwigConfigFile.toURI()
-		        .toURL());
+		clientConf.loadConf(hedwigConfigFile.toURI().toURL());
 
 		ServerConfiguration serverConf = new ServerConfiguration();
-		serverConf.loadConf(hedwigConfigFile.toURI()
-		        .toURL());
+		serverConf.loadConf(hedwigConfigFile.toURI().toURL());
 
 		hedwigServer = new PubSubServer(serverConf);
 		Context jndiContext = new InitialContext();
@@ -70,11 +53,10 @@ public class TestSimplePubSub extends HedwigJMSBaseTest {
 		TopicConnection topicConnectionSubscriber = topicConnectionFactorySubscriber.createTopicConnection();
 		TopicSession topicSessionSubscriber = topicConnectionSubscriber.createTopicSession(true,
 		        Session.CLIENT_ACKNOWLEDGE);
-		TopicSubscriber subscriber = null;
+		final TopicSubscriber subscriber = topicSessionSubscriber.createSubscriber(topic);
 		// since the subscriber only receives
 		// messages published *after* the subscription operation, we must
 		// create the subscriber now
-		subscriber = topicSessionSubscriber.createSubscriber(topic);
 		Thread.sleep(4000);
 
 		TopicPublisher topicPublisher = topicSession.createPublisher(topic);
@@ -84,13 +66,29 @@ public class TestSimplePubSub extends HedwigJMSBaseTest {
 			topicPublisher.publish(message);
 		}
 
+		final CountDownLatch signalMessageReceived = new CountDownLatch(1);
 		// make sure no message is received until we "start" the connection
-		// Message received = subscriber.receive(1000);
-		// Assert.assertTrue(received ==null);
+		new Timer().schedule(new TimerTask() {
 
+			@Override
+			public void run() {
+				try {
+					Message received = subscriber.receive(1000);
+					if (received != null) {
+						signalMessageReceived.countDown();
+					}
+				} catch (JMSException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			}
+		}, 0);
+
+		Assert.assertFalse(signalMessageReceived.await(2, TimeUnit.SECONDS));
 		topicConnectionSubscriber.start();
-		int i = 0;
-		for (i = 0; i < MAX_MESSAGES; i++) {
+		Assert.assertTrue(signalMessageReceived.await(2, TimeUnit.SECONDS));
+		int i;
+		for (i = 1; i < MAX_MESSAGES; i++) {
 			Message received = subscriber.receive(1000);
 			Assert.assertTrue(received instanceof TextMessage);
 			Assert.assertEquals("message #" + i, ((TextMessage) received).getText());
@@ -102,12 +100,10 @@ public class TestSimplePubSub extends HedwigJMSBaseTest {
 	@Test
 	public void testNoDeliveryUntilConnectionStarted() throws Exception, MalformedURLException {
 		ClientConfiguration clientConf = new ClientConfiguration();
-		clientConf.loadConf(hedwigConfigFile.toURI()
-		        .toURL());
+		clientConf.loadConf(hedwigConfigFile.toURI().toURL());
 
 		ServerConfiguration serverConf = new ServerConfiguration();
-		serverConf.loadConf(hedwigConfigFile.toURI()
-		        .toURL());
+		serverConf.loadConf(hedwigConfigFile.toURI().toURL());
 
 		hedwigServer = new PubSubServer(serverConf);
 		final Context jndiContext = new InitialContext();
@@ -135,9 +131,9 @@ public class TestSimplePubSub extends HedwigJMSBaseTest {
 
 				try {
 					signalReadyToReceive.countDown();
-	                receivedMessagePlaceholder.add(subscriber.receive(1000));
-                } catch (JMSException ignored) {
-                }
+					receivedMessagePlaceholder.add(subscriber.receive(1000));
+				} catch (JMSException ignored) {
+				}
 				signalReceived.countDown();
 
 			}
@@ -163,6 +159,5 @@ public class TestSimplePubSub extends HedwigJMSBaseTest {
 		Assert.assertEquals("message", ((TextMessage) receivedMessage).getText());
 
 	}
-	
 
 }
