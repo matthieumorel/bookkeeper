@@ -3,7 +3,6 @@ package org.apache.hedwig.jms.administered;
 import javax.jms.ConnectionConsumer;
 import javax.jms.JMSException;
 import javax.jms.ServerSessionPool;
-import javax.jms.Session;
 import javax.jms.Topic;
 import javax.jms.TopicConnection;
 import javax.jms.TopicSession;
@@ -21,13 +20,10 @@ public class HedwigTopicConnection extends HedwigConnection implements TopicConn
 
 	@Override
 	public TopicSession createTopicSession(boolean transacted, int acknowledgementMode) throws JMSException {
-		if (!transacted) {
-			throw new UnsupportedOperationException("Hedwig currently only supports transacted sessions");
+		if (transacted) {
+			throw new UnsupportedOperationException("Hedwig currently only supports non-transacted sessions");
 		}
-		if (!(Session.CLIENT_ACKNOWLEDGE == acknowledgementMode)) {
-			throw new UnsupportedOperationException("Hedwig current only supports client-acknowledged sessions");
-		}
-		return new HedwigTopicSession(this);
+		return new HedwigTopicSession(this, acknowledgementMode);
 	}
 
 }

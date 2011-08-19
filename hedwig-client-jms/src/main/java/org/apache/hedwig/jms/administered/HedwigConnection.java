@@ -1,18 +1,7 @@
 package org.apache.hedwig.jms.administered;
 
-import java.io.IOException;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.net.URLConnection;
-import java.net.URLStreamHandler;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.Semaphore;
-import java.util.concurrent.locks.Condition;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 
 import javax.jms.Connection;
 import javax.jms.ConnectionConsumer;
@@ -24,16 +13,12 @@ import javax.jms.ServerSessionPool;
 import javax.jms.Session;
 import javax.jms.Topic;
 
-import org.apache.commons.configuration.ConfigurationException;
-import org.apache.hedwig.client.conf.ClientConfiguration;
-import org.apache.hedwig.client.netty.HedwigClient;
 import org.apache.hedwig.jms.HedwigMessageConsumer;
 
 /**
  * 
- * <u>NOTE:</u>
- * The JMS spec indicate that a Connection encapsulates a connection to a JMS
- * provider, typically a TCP connection.
+ * <u>NOTE:</u> The JMS spec indicate that a Connection encapsulates a
+ * connection to a JMS provider, typically a TCP connection.
  * 
  * However, a connection may have multiple subscribers, which receive
  * <b>independent</b> copies of messages, that can be acknowledged
@@ -85,11 +70,7 @@ public abstract class HedwigConnection implements Connection {
 			throw new UnsupportedOperationException(
 			        "Hedwig's JMS implementation currently only supports transacted sessions");
 		}
-		if (acknowledgeMode != Session.CLIENT_ACKNOWLEDGE) {
-			throw new UnsupportedOperationException(
-			        "Hedwig's JMS implementation currently only supports client acknowledged sessions");
-		}
-		return new HedwigSession(this);
+		return new HedwigSession(this, acknowledgeMode);
 	}
 
 	@Override

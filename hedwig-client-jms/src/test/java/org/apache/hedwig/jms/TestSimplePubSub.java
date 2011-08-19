@@ -46,12 +46,12 @@ public class TestSimplePubSub extends HedwigJMSBaseTest {
 		        .lookup("TopicConnectionFactory");
 		Topic topic = (Topic) jndiContext.lookup("topic.Topic1");
 		TopicConnection topicConnection = topicConnectionFactoryPublisher.createTopicConnection();
-		TopicSession topicSession = topicConnection.createTopicSession(true, Session.CLIENT_ACKNOWLEDGE);
+		TopicSession topicSession = topicConnection.createTopicSession(false, Session.CLIENT_ACKNOWLEDGE);
 
 		TopicConnectionFactory topicConnectionFactorySubscriber = (TopicConnectionFactory) jndiContext
 		        .lookup("TopicConnectionFactory");
 		TopicConnection topicConnectionSubscriber = topicConnectionFactorySubscriber.createTopicConnection();
-		TopicSession topicSessionSubscriber = topicConnectionSubscriber.createTopicSession(true,
+		TopicSession topicSessionSubscriber = topicConnectionSubscriber.createTopicSession(false,
 		        Session.CLIENT_ACKNOWLEDGE);
 		final TopicSubscriber subscriber = topicSessionSubscriber.createSubscriber(topic);
 		// since the subscriber only receives
@@ -111,14 +111,14 @@ public class TestSimplePubSub extends HedwigJMSBaseTest {
 		        .lookup("TopicConnectionFactory");
 		final Topic topic = (Topic) jndiContext.lookup("topic.Topic1");
 		TopicConnection topicConnection = topicConnectionFactoryPublisher.createTopicConnection();
-		TopicSession topicSession = topicConnection.createTopicSession(true, Session.CLIENT_ACKNOWLEDGE);
+		TopicSession topicSession = topicConnection.createTopicSession(false, Session.CLIENT_ACKNOWLEDGE);
 
 		final CountDownLatch signalReadyToReceive = new CountDownLatch(1);
 		final CountDownLatch signalReceived = new CountDownLatch(1);
 		TopicConnectionFactory subscriberTopicConnectionFactory = (TopicConnectionFactory) jndiContext
 		        .lookup("TopicConnectionFactory");
 		final TopicConnection subscriberTopicConnection = subscriberTopicConnectionFactory.createTopicConnection();
-		TopicSession subscriberTopicSession = subscriberTopicConnection.createTopicSession(true,
+		TopicSession subscriberTopicSession = subscriberTopicConnection.createTopicSession(false,
 		        Session.CLIENT_ACKNOWLEDGE);
 		final TopicSubscriber subscriber = subscriberTopicSession.createSubscriber(topic);
 		Thread.sleep(4000);

@@ -21,7 +21,7 @@ import org.apache.hedwig.exceptions.PubSubException.ClientNotSubscribedException
 import org.apache.hedwig.exceptions.PubSubException.CouldNotConnectException;
 import org.apache.hedwig.exceptions.PubSubException.ServiceDownException;
 import org.apache.hedwig.jms.administered.HedwigSession;
-import org.apache.hedwig.jms.message.MessageFactory;
+import org.apache.hedwig.jms.message.HedwigJMSMessage;
 import org.apache.hedwig.jms.util.ClientIdGenerator;
 import org.apache.hedwig.jms.util.JMSUtils;
 import org.apache.hedwig.protocol.PubSubProtocol.SubscribeRequest.CreateOrAttach;
@@ -77,6 +77,10 @@ public class HedwigMessageConsumer implements MessageConsumer, MessageHandler {
 		return subscriberId;
 	}
 
+	public ByteString getHedwigTopicName() {
+		return topicName;
+	}
+
 	@Override
 	public String getMessageSelector() throws JMSException {
 		// TODO Auto-generated method stub
@@ -122,19 +126,21 @@ public class HedwigMessageConsumer implements MessageConsumer, MessageHandler {
 		} catch (ClientNotSubscribedException e) {
 			throw JMSUtils.createJMSException("Cannot receive message", e);
 		}
+		HedwigJMSMessage retrieved = null;
 		if (timeout == 0) {
-			org.apache.hedwig.protocol.PubSubProtocol.Message hMessage = hedwigSession.takeNextMessage(subscriberId)
-			        .getMessage();
-			return MessageFactory.getMessage(hMessage);
+			retrieved = hedwigSession.takeNextMessage(subscriberId);
 		} else if (timeout > 0) {
-			org.apache.hedwig.protocol.PubSubProtocol.Message hMessage = hedwigSession.pollNextMessage(subscriberId,
-			        timeout, TimeUnit.MILLISECONDS).getMessage();
-			return MessageFactory.getMessage(hMessage);
+			retrieved = hedwigSession.pollNextMessage(subscriberId, timeout, TimeUnit.MILLISECONDS);
 		} else {
-			org.apache.hedwig.protocol.PubSubProtocol.Message hMessage = hedwigSession.pollNextMessage(subscriberId, 0,
-			        TimeUnit.MILLISECONDS).getMessage();
-			return MessageFactory.getMessage(hMessage);
+			retrieved = hedwigSession.pollNextMessage(subscriberId, 0, TimeUnit.MILLISECONDS);
 		}
+		if (retrieved != null) {
+			hedwigSession.messageSuccessfullyDelivered(retrieved);
+			return retrieved;
+		} else {
+			return null;
+		}
+
 	}
 
 	@Override
@@ -152,6 +158,16 @@ public class HedwigMessageConsumer implements MessageConsumer, MessageHandler {
 			hedwigSession.offerReceivedMessage(msg, subscriberId);
 		}
 
+	}
+
+	public void acknowledge(HedwigJMSMessage message) {
+		try {
+			// tell hedwig
+			hedwigClient.getSubscriber().consume(topicName, subscriberId, message.getMessage().getMsgId());
+		} catch (ClientNotSubscribedException e) {
+			// TODO propagate into some jms exception
+			e.printStackTrace();
+		}
 	}
 
 	public void signalStarted() {

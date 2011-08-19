@@ -2,9 +2,9 @@ package org.apache.hedwig.jms.administered;
 
 import javax.jms.MessageListener;
 
-import org.apache.hedwig.jms.message.MessageFactory;
+import org.apache.hedwig.jms.message.HedwigJMSMessage;
+import org.apache.hedwig.jms.message.JMSMessageFactory;
 import org.apache.hedwig.jms.util.SessionMessageQueue;
-import org.apache.hedwig.jms.util.SessionMessageQueue.MessageWithSubscriberId;
 
 public class SessionControlThread extends Thread {
 
@@ -24,9 +24,16 @@ public class SessionControlThread extends Thread {
 				session.getHedwigConnection().waitUntilStarted();
 			} catch (InterruptedException ignored) {
 			}
-			MessageWithSubscriberId next = receivedMessages.blockingRetrieveAny();
-			MessageListener messageListener = session.getListeners().get(next.getSubscriberId());
-			messageListener.onMessage(MessageFactory.getMessage(next.getMessage()));
+			try {
+				HedwigJMSMessage next = receivedMessages.blockingRetrieveAny();
+				MessageListener messageListener = session.getListeners().get(next.getSubscriberId());
+				messageListener.onMessage(JMSMessageFactory.getMessage(session, next.getSubscriberId(),
+				        next.getMessage()));
+				session.messageSuccessfullyDelivered(next);
+			} catch (RuntimeException e) {
+				// TODO just log it
+				e.printStackTrace();
+			}
 		}
 	}
 }

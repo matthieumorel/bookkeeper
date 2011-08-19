@@ -43,7 +43,7 @@ public class TestTopicListeners extends HedwigJMSBaseTest {
 		        .lookup("TopicConnectionFactory");
 		final Topic topic = (Topic) jndiContext.lookup("topic.Topic1");
 		TopicConnection topicConnection = topicConnectionFactoryPublisher.createTopicConnection();
-		TopicSession topicSession = topicConnection.createTopicSession(true, Session.CLIENT_ACKNOWLEDGE);
+		TopicSession topicSession = topicConnection.createTopicSession(false, Session.CLIENT_ACKNOWLEDGE);
 
 		final CountDownLatch signalReadyToReceive = new CountDownLatch(1);
 		final CountDownLatch signalReceived = new CountDownLatch(NB_MESSAGES);
@@ -62,7 +62,7 @@ public class TestTopicListeners extends HedwigJMSBaseTest {
 					        .lookup("TopicConnectionFactory");
 					final TopicConnection subscriberTopicConnection = subscriberTopicConnectionFactory
 					        .createTopicConnection();
-					TopicSession subscriberTopicSession = subscriberTopicConnection.createTopicSession(true,
+					TopicSession subscriberTopicSession = subscriberTopicConnection.createTopicSession(false,
 					        Session.CLIENT_ACKNOWLEDGE);
 					final TopicSubscriber subscriber = subscriberTopicSession.createSubscriber(topic);
 					subscriber.setMessageListener(new TopicListenerA(signalReceived));

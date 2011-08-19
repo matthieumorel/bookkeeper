@@ -6,7 +6,6 @@ import javax.jms.TopicPublisher;
 import javax.jms.TopicSession;
 import javax.jms.TopicSubscriber;
 
-import org.apache.hedwig.client.netty.HedwigClient;
 import org.apache.hedwig.jms.HedwigTopicPublisher;
 import org.apache.hedwig.jms.HedwigTopicSubscriber;
 
@@ -14,10 +13,9 @@ import com.google.protobuf.ByteString;
 
 public class HedwigTopicSession extends HedwigSession implements TopicSession {
 
-	public HedwigTopicSession(HedwigConnection connection) {
-	    super(connection);
-	    // TODO Auto-generated constructor stub
-    }
+	public HedwigTopicSession(HedwigConnection connection, int ackMode) {
+		super(connection, ackMode);
+	}
 
 	@Override
 	public TopicPublisher createPublisher(Topic topic) throws JMSException {
@@ -31,11 +29,12 @@ public class HedwigTopicSession extends HedwigSession implements TopicSession {
 
 	@Override
 	public TopicSubscriber createSubscriber(Topic topic, String messageSelector, boolean noLocal) throws JMSException {
-		if (messageSelector!=null) {
+		if (messageSelector != null) {
 			throw new UnsupportedOperationException("Hedwig currently does not provide message selectors");
 		}
 		if (noLocal) {
-			throw new UnsupportedOperationException("Hedwig currently does not distinguish between local and non local subscriptions");
+			throw new UnsupportedOperationException(
+			        "Hedwig currently does not distinguish between local and non local subscriptions");
 		}
 		return new HedwigTopicSubscriber(this, ByteString.copyFromUtf8(topic.getTopicName()));
 	}
