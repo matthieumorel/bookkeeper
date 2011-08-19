@@ -6,26 +6,58 @@ import javax.jms.Destination;
 import javax.jms.JMSException;
 import javax.jms.Message;
 
+import org.apache.hedwig.jms.administered.HedwigSession;
 import org.apache.hedwig.protocol.PubSubProtocol.Message.Builder;
 
+import com.google.protobuf.ByteString;
+
 // TODO implement all properties, probably using an extra map field in the message structure (for ttl etc...)
-public abstract class HedwigJMSMessage implements Message {
-	
+public class HedwigJMSMessage implements Message {
+
 	protected Builder builder;
 	protected org.apache.hedwig.protocol.PubSubProtocol.Message hedwigMessage;
-	
-	public HedwigJMSMessage() {
+	ByteString subscriberId;
+	HedwigSession hedwigSession;
+
+	boolean acknowledged = false;
+	boolean alreadyDelivered = false;
+
+	public HedwigJMSMessage(HedwigSession hedwigSession) {
 		builder = org.apache.hedwig.protocol.PubSubProtocol.Message.newBuilder();
+		this.hedwigSession = hedwigSession;
 	}
-	
-	public HedwigJMSMessage(org.apache.hedwig.protocol.PubSubProtocol.Message hedwigMessage) {
+
+	public HedwigJMSMessage(HedwigSession hedwigSession, ByteString subscriberId,
+	        org.apache.hedwig.protocol.PubSubProtocol.Message hedwigMessage) {
+		this.hedwigSession = hedwigSession;
+		this.subscriberId = subscriberId;
 		this.hedwigMessage = hedwigMessage;
 	}
 
-	
+	public ByteString getSubscriberId() {
+		return subscriberId;
+	}
+
+	public org.apache.hedwig.protocol.PubSubProtocol.Message getMessage() {
+		return hedwigMessage;
+	}
+
+	public boolean isAcknowledged() {
+		return acknowledged;
+	}
+
+	public void setDelivered() {
+		this.alreadyDelivered = true;
+	}
+
+	public HedwigSession getHedwigSession() {
+		return hedwigSession;
+	}
+
 	@Override
 	public void acknowledge() throws JMSException {
-		// TODO Auto-generated method stub
+
+		hedwigSession.getConsumer(subscriberId).acknowledge(this);
 
 	}
 
@@ -115,8 +147,7 @@ public abstract class HedwigJMSMessage implements Message {
 
 	@Override
 	public boolean getJMSRedelivered() throws JMSException {
-		// TODO Auto-generated method stub
-		return false;
+		return alreadyDelivered;
 	}
 
 	@Override
@@ -292,8 +323,7 @@ public abstract class HedwigJMSMessage implements Message {
 		// TODO Auto-generated method stub
 
 	}
-	
-	
+
 	public org.apache.hedwig.protocol.PubSubProtocol.Message getHedwigMessage() {
 		return builder.build();
 	}
