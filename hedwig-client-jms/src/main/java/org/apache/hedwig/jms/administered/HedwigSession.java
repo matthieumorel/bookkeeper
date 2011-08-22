@@ -1,6 +1,8 @@
 package org.apache.hedwig.jms.administered;
 
 import java.io.Serializable;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -25,11 +27,14 @@ import javax.jms.TextMessage;
 import javax.jms.Topic;
 import javax.jms.TopicSubscriber;
 
+import org.apache.hedwig.client.conf.ClientConfiguration;
 import org.apache.hedwig.client.exceptions.InvalidSubscriberIdException;
+import org.apache.hedwig.client.netty.HedwigClient;
 import org.apache.hedwig.exceptions.PubSubException.ClientAlreadySubscribedException;
 import org.apache.hedwig.exceptions.PubSubException.ClientNotSubscribedException;
 import org.apache.hedwig.exceptions.PubSubException.CouldNotConnectException;
 import org.apache.hedwig.exceptions.PubSubException.ServiceDownException;
+import org.apache.hedwig.jms.FileURLHandler;
 import org.apache.hedwig.jms.HedwigMessageConsumer;
 import org.apache.hedwig.jms.message.HedwigJMSMessage;
 import org.apache.hedwig.jms.message.HedwigJMSTextMessage;
@@ -46,12 +51,31 @@ public class HedwigSession implements Session {
 	Map<ByteString, MessageListener> listeners = new HashMap<ByteString, MessageListener>();
 	Map<ByteString, HedwigMessageConsumer> consumers = new HashMap<ByteString, HedwigMessageConsumer>();
 	int ackMode;
+	private HedwigClient hedwigClient;
 
 	public HedwigSession(HedwigConnection connection, int ackMode) {
 		this.connection = connection;
 		this.ackMode = ackMode;
 		this.sessionMessageQueue = new SessionMessageQueue(this);
 		this.sessionControlThread = new SessionControlThread(sessionMessageQueue, this);
+		ClientConfiguration config = new ClientConfiguration();
+		try {
+			config.loadConf(new URL(null, "classpath://hedwig-client.cfg", new FileURLHandler(ClassLoader
+			        .getSystemClassLoader())));
+			// use 1 client per session for sending events
+			this.hedwigClient = new HedwigClient(config);
+		} catch (MalformedURLException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (org.apache.commons.configuration.ConfigurationException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+
+	}
+
+	public HedwigClient getHedwigProducerForSession() {
+		return hedwigClient;
 	}
 
 	public void messageSuccessfullyDelivered(HedwigJMSMessage message) {
