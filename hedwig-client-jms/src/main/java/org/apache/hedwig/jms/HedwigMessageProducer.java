@@ -5,15 +5,9 @@ import javax.jms.Destination;
 import javax.jms.JMSException;
 import javax.jms.Message;
 import javax.jms.MessageProducer;
-import javax.jms.Topic;
 
-import org.apache.hedwig.exceptions.PubSubException.CouldNotConnectException;
-import org.apache.hedwig.exceptions.PubSubException.ServiceDownException;
 import org.apache.hedwig.jms.administered.HedwigSession;
 import org.apache.hedwig.jms.message.HedwigJMSMessage;
-import org.apache.hedwig.jms.util.JMSUtils;
-
-import com.google.protobuf.ByteString;
 
 public abstract class HedwigMessageProducer implements MessageProducer {
 
@@ -100,19 +94,8 @@ public abstract class HedwigMessageProducer implements MessageProducer {
 		// JMS: If the time-to-live is specified as zero, expiration is set to
 		// zero to indicate that the message does not expire.
 		message.setJMSExpiration(timeToLive == 0 ? 0 : message.getJMSTimestamp() + timeToLive);
-		try {
-			// messages are sent through a single hedwig client in the session
-			// so that they are serially ordered
-			hedwigSession
-			        .getHedwigProducerForSession()
-			        .getPublisher()
-			        .publish(ByteString.copyFromUtf8(((Topic) destination).getTopicName()),
-			                ((HedwigJMSMessage) message).getHedwigMessage());
-		} catch (CouldNotConnectException e) {
-			JMSUtils.createJMSException("Cannot publish message: cannot connect to broker", e);
-		} catch (ServiceDownException e) {
-			JMSUtils.createJMSException("Cannot publish message: broker down?", e);
-		}
+
+		hedwigSession.send(destination, (HedwigJMSMessage) message);
 
 	}
 

@@ -10,6 +10,7 @@ import java.util.concurrent.TimeUnit;
 
 import javax.jms.BytesMessage;
 import javax.jms.Destination;
+import javax.jms.IllegalStateException;
 import javax.jms.JMSException;
 import javax.jms.MapMessage;
 import javax.jms.Message;
@@ -39,6 +40,7 @@ import org.apache.hedwig.jms.HedwigMessageConsumer;
 import org.apache.hedwig.jms.message.HedwigJMSMessage;
 import org.apache.hedwig.jms.message.HedwigJMSTextMessage;
 import org.apache.hedwig.jms.util.SessionMessageQueue;
+import org.apache.hedwig.protocol.PubSubProtocol.MessageSeqId;
 import org.apache.hedwig.protocol.PubSubProtocol.SubscribeRequest.CreateOrAttach;
 
 import com.google.protobuf.ByteString;
@@ -78,11 +80,19 @@ public class HedwigSession implements Session {
 		return hedwigClient;
 	}
 
-	public void messageSuccessfullyDelivered(HedwigJMSMessage message) {
+	public void send(Destination destination, HedwigJMSMessage message) throws JMSException {
+		sessionMessageQueue.offerMessageToSend(destination, message);
+	}
+
+	public void acknowledged(MessageSeqId messageId) throws JMSException {
+		sessionMessageQueue.messageAcknowledged(messageId);
+	}
+
+	public void messageSuccessfullyDelivered(HedwigJMSMessage message) throws JMSException {
 		// do acknowledgement
 		switch (ackMode) {
 		case Session.AUTO_ACKNOWLEDGE:
-			consumers.get(message.getSubscriberId()).acknowledge(message);
+			consumers.get(message.getSubscriberId()).acknowledge(message.getMessage().getMsgId());
 			break;
 		case Session.CLIENT_ACKNOWLEDGE:
 			// let the client acknowledge explicitely
@@ -91,14 +101,14 @@ public class HedwigSession implements Session {
 		case Session.DUPS_OK_ACKNOWLEDGE:
 			// FIXME not sure how to "lazily" acknowledge. Let's simply
 			// acknowledge for now
-			consumers.get(message.getSubscriberId()).acknowledge(message);
+			consumers.get(message.getSubscriberId()).acknowledge(message.getMessage().getMsgId());
 			break;
 		case Session.SESSION_TRANSACTED:
 			// ack comes with a "commit" statement
 			sessionMessageQueue.unacknowledgedMessageDelivered(message);
 			break;
 		default:
-			throw new RuntimeException("There cannot be no acknowledgement mode for a session");
+			throw new JMSException("There cannot be no acknowledgement mode for a session");
 		}
 	}
 
@@ -131,8 +141,8 @@ public class HedwigSession implements Session {
 	}
 
 	public boolean offerReceivedMessage(org.apache.hedwig.protocol.PubSubProtocol.Message message,
-	        ByteString subscriberId) {
-		return sessionMessageQueue.offerReceivedMessage(subscriberId, message);
+	        ByteString topicName, ByteString subscriberId) {
+		return sessionMessageQueue.offerReceivedMessage(subscriberId, topicName, message);
 	}
 
 	public HedwigJMSMessage takeNextMessage() {
@@ -155,8 +165,10 @@ public class HedwigSession implements Session {
 
 	@Override
 	public void commit() throws JMSException {
-		// TODO Auto-generated method stub
-
+		if (!getTransacted()) {
+			throw new IllegalStateException("Cannot commit a non-transacted session");
+		}
+		sessionMessageQueue.commit();
 	}
 
 	@Override
@@ -282,9 +294,10 @@ public class HedwigSession implements Session {
 	}
 
 	@Override
-	public TextMessage createTextMessage(String arg0) throws JMSException {
-		// TODO Auto-generated method stub
-		return null;
+	public TextMessage createTextMessage(String text) throws JMSException {
+		TextMessage textMessage = createTextMessage();
+		textMessage.setText(text);
+		return textMessage;
 	}
 
 	@Override
@@ -307,8 +320,7 @@ public class HedwigSession implements Session {
 
 	@Override
 	public boolean getTransacted() throws JMSException {
-		// TODO Auto-generated method stub
-		return false;
+		return Session.SESSION_TRANSACTED == ackMode;
 	}
 
 	@Override
@@ -321,8 +333,8 @@ public class HedwigSession implements Session {
 				next.getHedwigClient().getSubscriber()
 				        .closeSubscription(next.getHedwigTopicName(), next.getSubscriberId());
 			} catch (ServiceDownException e) {
-				throw new JMSException("Cannot recover because broker is down", ServiceDownException.class.getName()
-				        + "/" + e.getMessage());
+				throw new JMSException("Cannot " + (getTransacted() ? "rollback" : "recover")
+				        + " because broker is down", ServiceDownException.class.getName() + "/" + e.getMessage());
 			}
 		}
 
@@ -341,24 +353,27 @@ public class HedwigSession implements Session {
 				next.getHedwigClient().getSubscriber()
 				        .subscribe(next.getHedwigTopicName(), next.getSubscriberId(), CreateOrAttach.CREATE_OR_ATTACH);
 			} catch (CouldNotConnectException e) {
-				throw new JMSException("Cannot recover because connection to broker is impossible",
-				        CouldNotConnectException.class.getName() + "/" + e.getMessage());
+				throw new JMSException("Cannot " + (getTransacted() ? "rollback" : "recover")
+				        + " because connection to broker is impossible", CouldNotConnectException.class.getName() + "/"
+				        + e.getMessage());
 			} catch (ClientAlreadySubscribedException e) {
-				throw new JMSException("Cannot recover due to an internal error ",
-				        CouldNotConnectException.class.getName() + "/" + e.getMessage());
+				throw new JMSException("Cannot " + (getTransacted() ? "rollback" : "recover")
+				        + " due to an internal error ", CouldNotConnectException.class.getName() + "/" + e.getMessage());
 			} catch (ServiceDownException e) {
-				throw new JMSException("Cannot recover because broker is down", ServiceDownException.class.getName()
-				        + "/" + e.getMessage());
+				throw new JMSException("Cannot " + (getTransacted() ? "rollback" : "recover")
+				        + " because broker is down", ServiceDownException.class.getName() + "/" + e.getMessage());
 			} catch (InvalidSubscriberIdException e) {
-				throw new JMSException("Cannot recover due to an internal error",
-				        InvalidSubscriberIdException.class.getName() + "/" + e.getMessage());
+				throw new JMSException("Cannot " + (getTransacted() ? "rollback" : "recover")
+				        + " due to an internal error", InvalidSubscriberIdException.class.getName() + "/"
+				        + e.getMessage());
 			}
 			try {
 				next.getHedwigClient().getSubscriber()
 				        .startDelivery(next.getHedwigTopicName(), next.getSubscriberId(), next);
 			} catch (ClientNotSubscribedException e) {
-				throw new JMSException("Cannot recover due to an internal error",
-				        ClientNotSubscribedException.class.getName() + "/" + e.getMessage());
+				throw new JMSException("Cannot " + (getTransacted() ? "rollback" : "recover")
+				        + " due to an internal error", ClientNotSubscribedException.class.getName() + "/"
+				        + e.getMessage());
 			}
 		}
 
@@ -366,8 +381,8 @@ public class HedwigSession implements Session {
 
 	@Override
 	public void rollback() throws JMSException {
-		// TODO Auto-generated method stub
-
+		sessionMessageQueue.clearPendingMessages();
+		recover();
 	}
 
 	@Override

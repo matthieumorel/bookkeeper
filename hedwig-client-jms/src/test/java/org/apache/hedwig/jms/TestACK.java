@@ -27,6 +27,7 @@ public class TestACK extends HedwigJMSBaseTest {
 
 	private static final int MAX_MESSAGES = 1000;
 	private static final int CLIENT_ACK_UNTIL = 42;
+	private static final int COMMIT_INDEX = 42;
 
 	public void testTransactedSession() throws Exception {
 
@@ -161,5 +162,88 @@ public class TestACK extends HedwigJMSBaseTest {
 		Message received = subscriber.receive(5000);
 		Assert.assertNull(received);
 
+	}
+
+	@Test
+	public void testTransaction() throws Exception {
+
+		ClientConfiguration clientConf = new ClientConfiguration();
+		clientConf.loadConf(hedwigConfigFile.toURI().toURL());
+
+		ServerConfiguration serverConf = new ServerConfiguration();
+		serverConf.loadConf(hedwigConfigFile.toURI().toURL());
+
+		hedwigServer = new PubSubServer(serverConf);
+		Context jndiContext = new InitialContext();
+		TopicConnectionFactory topicConnectionFactory1 = (TopicConnectionFactory) jndiContext
+		        .lookup("TopicConnectionFactory");
+		Topic topic1 = (Topic) jndiContext.lookup("topic.Topic1");
+		final Topic topic2 = (Topic) jndiContext.lookup("topic.Topic2");
+		TopicConnection topicConnection1 = topicConnectionFactory1.createTopicConnection();
+		final TopicSession topicSession1 = topicConnection1.createTopicSession(false, Session.AUTO_ACKNOWLEDGE);
+
+		TopicConnectionFactory topicConnectionFactory2 = (TopicConnectionFactory) jndiContext
+		        .lookup("TopicConnectionFactory");
+		TopicConnection topicConnection2 = topicConnectionFactory2.createTopicConnection();
+		final TopicSession topicSession2 = topicConnection2.createTopicSession(false, Session.SESSION_TRANSACTED);
+
+		final TopicSubscriber subscriberToTopic1 = topicSession2.createSubscriber(topic1);
+		final TopicSubscriber subscriberToTopic2 = topicSession2.createSubscriber(topic2);
+		final TopicPublisher publisher2 = topicSession2.createPublisher(topic1);
+
+		// since the subscriber only receives
+		// messages published *after* the subscription operation, we must
+		// create the subscribers now
+		Thread.sleep(4000);
+
+		TopicPublisher topicPublisher = topicSession1.createPublisher(topic1);
+		for (int i = 0; i < MAX_MESSAGES; i++) {
+			TextMessage message = topicSession1.createTextMessage();
+			message.setText("message #" + i);
+			topicPublisher.publish(message);
+		}
+
+		topicConnection2.start();
+
+		int i;
+		for (i = 0; i < MAX_MESSAGES; i++) {
+			Message received = subscriberToTopic1.receive(1000);
+			Assert.assertTrue(received instanceof TextMessage);
+			Assert.assertEquals("message #" + i, ((TextMessage) received).getText());
+			publisher2.send(topic2, topicSession1.createTextMessage("resending " + ((TextMessage) received).getText()));
+			Assert.assertFalse(received.getJMSRedelivered());
+			if (i == COMMIT_INDEX) {
+				topicSession2.commit();
+			}
+		}
+
+		Thread.sleep(1000);
+		topicSession2.rollback();
+
+		// for client acknowledge, we should only get messages after
+		// CLIENT_ACK_UNTIL
+		for (i = COMMIT_INDEX + 1; i < MAX_MESSAGES; i++) {
+			Message received = subscriberToTopic1.receive(1000);
+			Assert.assertTrue(received instanceof TextMessage);
+			Assert.assertEquals("message #" + i, ((TextMessage) received).getText());
+			Assert.assertTrue(received.getJMSRedelivered());
+		}
+
+		// check there is no other message for topic 1
+		Message received = subscriberToTopic1.receive(5000);
+		Assert.assertNull(received);
+
+		// check that pending messages to send were sent upon commit and that
+		// others were not sent
+		for (i = 0; i <= COMMIT_INDEX; i++) {
+			received = subscriberToTopic2.receive(1000);
+			Assert.assertTrue(received instanceof TextMessage);
+			Assert.assertEquals("resending message #" + i, ((TextMessage) received).getText());
+			// Assert.assertFalse(received.getJMSRedelivered());
+		}
+
+		// check there is no other message for topic 2
+		received = subscriberToTopic2.receive(5000);
+		Assert.assertNull(received);
 	}
 }

@@ -1,5 +1,6 @@
 package org.apache.hedwig.jms.administered;
 
+import javax.jms.JMSException;
 import javax.jms.MessageListener;
 
 import org.apache.hedwig.jms.message.HedwigJMSMessage;
@@ -32,6 +33,9 @@ public class SessionControlThread extends Thread {
 				session.messageSuccessfullyDelivered(next);
 			} catch (RuntimeException e) {
 				// TODO just log it
+				e.printStackTrace();
+			} catch (JMSException e) {
+				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
 		}

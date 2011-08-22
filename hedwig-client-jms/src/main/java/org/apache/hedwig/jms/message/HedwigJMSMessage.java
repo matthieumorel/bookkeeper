@@ -57,7 +57,7 @@ public class HedwigJMSMessage implements Message {
 	@Override
 	public void acknowledge() throws JMSException {
 
-		hedwigSession.getConsumer(subscriberId).acknowledge(this);
+		hedwigSession.getConsumer(subscriberId).acknowledge(getMessage().getMsgId());
 
 	}
 
