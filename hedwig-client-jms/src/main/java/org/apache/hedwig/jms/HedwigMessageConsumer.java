@@ -24,6 +24,7 @@ import org.apache.hedwig.jms.administered.HedwigSession;
 import org.apache.hedwig.jms.message.HedwigJMSMessage;
 import org.apache.hedwig.jms.util.ClientIdGenerator;
 import org.apache.hedwig.jms.util.JMSUtils;
+import org.apache.hedwig.protocol.PubSubProtocol.MessageSeqId;
 import org.apache.hedwig.protocol.PubSubProtocol.SubscribeRequest.CreateOrAttach;
 import org.apache.hedwig.util.Callback;
 
@@ -155,18 +156,21 @@ public class HedwigMessageConsumer implements MessageConsumer, MessageHandler {
 		if (this.topicName.equals(topic) && this.subscriberId.equals(subscriberId)) {
 			System.out.println("--> " + msg.getBody().toStringUtf8());
 			// serialize access to messages through the session
-			hedwigSession.offerReceivedMessage(msg, subscriberId);
+			hedwigSession.offerReceivedMessage(msg, topicName, subscriberId);
 		}
 
 	}
 
-	public void acknowledge(HedwigJMSMessage message) {
+	public void acknowledge(MessageSeqId messageId) throws JMSException {
 		try {
 			// tell hedwig
-			hedwigClient.getSubscriber().consume(topicName, subscriberId, message.getMessage().getMsgId());
+			hedwigClient.getSubscriber().consume(topicName, subscriberId, messageId);
+			hedwigSession.acknowledged(messageId);
 		} catch (ClientNotSubscribedException e) {
-			// TODO propagate into some jms exception
-			e.printStackTrace();
+			throw JMSUtils
+			        .createJMSException(
+			                "Cannot acknowledge message because this client is not subscribed to the corresponding destination",
+			                e);
 		}
 	}
 

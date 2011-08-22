@@ -1,18 +1,24 @@
 package org.apache.hedwig.jms.util;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
-import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 
+import javax.jms.Destination;
 import javax.jms.JMSException;
+import javax.jms.Session;
+import javax.jms.Topic;
 
+import org.apache.hedwig.exceptions.PubSubException.CouldNotConnectException;
+import org.apache.hedwig.exceptions.PubSubException.ServiceDownException;
 import org.apache.hedwig.jms.administered.HedwigSession;
+import org.apache.hedwig.jms.administered.HedwigTopic;
 import org.apache.hedwig.jms.message.HedwigJMSMessage;
 import org.apache.hedwig.jms.message.JMSMessageFactory;
 import org.apache.hedwig.protocol.PubSubProtocol;
@@ -32,9 +38,12 @@ public class SessionMessageQueue {
 	ReentrantLock lock = new ReentrantLock();
 	Condition notEmpty = lock.newCondition();
 	Map<ByteString, Condition> subscribersNotEmptyConditions = new HashMap<ByteString, Condition>();
-	Set<MessageSeqId> unacknowledgedDeliveredMessageIds = new HashSet<PubSubProtocol.MessageSeqId>();
+	Map<MessageSeqId, TopicNameAndSubscriberId> undeliveredMessageIds = new HashMap<PubSubProtocol.MessageSeqId, TopicNameAndSubscriberId>();
+	Map<MessageSeqId, TopicNameAndSubscriberId> unacknowledgedDeliveredMessageIds = new HashMap<PubSubProtocol.MessageSeqId, TopicNameAndSubscriberId>();
+	MessageSeqId lastUnacknowledged = null;
 	boolean recovering = false;
 	HedwigSession hedwigSession;
+	List<MessageWithDestination> pendingMessagesToSend = new ArrayList<SessionMessageQueue.MessageWithDestination>();
 
 	// put messages by consumer's client id
 
@@ -50,18 +59,102 @@ public class SessionMessageQueue {
 		recovering = true;
 	}
 
-	public boolean offerReceivedMessage(ByteString subscriberId,
+	// NOTE: currently, upon failure in the commit operation, there is no
+	// rollback
+	public void commit() throws JMSException {
+		// 1. acknowledge all received messages
+		undeliveredMessageIds.clear();
+
+		if (lastUnacknowledged != null) {
+			hedwigSession.getConsumer(unacknowledgedDeliveredMessageIds.get(lastUnacknowledged).getSubscriberId())
+			        .acknowledge(lastUnacknowledged);
+			lastUnacknowledged = null;
+		}
+
+		// 2. send all pending messages
+		Iterator<MessageWithDestination> iterator = pendingMessagesToSend.iterator();
+		while (iterator.hasNext()) {
+
+			MessageWithDestination next = iterator.next();
+			System.out.println("sending pending message ");
+
+			// TODO async publish?
+			try {
+				hedwigSession
+				        .getHedwigProducerForSession()
+				        .getPublisher()
+				        .publish(ByteString.copyFromUtf8(((HedwigTopic) next.getDestination()).getTopicName()),
+				                next.getMessage().getHedwigMessage());
+			} catch (CouldNotConnectException e) {
+				throw JMSUtils.createJMSException("Cannot send pending message while committing transaction", e);
+			} catch (ServiceDownException e) {
+				throw JMSUtils.createJMSException("Cannot send pending message while committing transaction", e);
+			}
+		}
+
+	}
+
+	public void clearPendingMessages() throws JMSException {
+		// destroy pending messages to send
+		pendingMessagesToSend.clear();
+	}
+
+	public void messageAcknowledged(MessageSeqId messageId) throws JMSException {
+
+		if (lastUnacknowledged != null && lastUnacknowledged.equals(messageId)) {
+			lastUnacknowledged = null;
+		}
+		switch (hedwigSession.getAcknowledgeMode()) {
+		case Session.AUTO_ACKNOWLEDGE:
+			undeliveredMessageIds.remove(messageId);
+			break;
+		case Session.CLIENT_ACKNOWLEDGE:
+			unacknowledgedDeliveredMessageIds.remove(messageId);
+			break;
+		case Session.DUPS_OK_ACKNOWLEDGE:
+			undeliveredMessageIds.remove(messageId);
+			break;
+		case Session.SESSION_TRANSACTED:
+			unacknowledgedDeliveredMessageIds.remove(messageId);
+			break;
+		default:
+			break;
+		}
+	}
+
+	public void offerMessageToSend(Destination destination, HedwigJMSMessage jmsMessage) throws JMSException {
+		if (hedwigSession.getTransacted()) {
+			pendingMessagesToSend.add(new MessageWithDestination(destination, jmsMessage));
+		} else {
+			try {
+				// messages are sent through a single hedwig client in the
+				// session
+				// so that they are serially ordered
+				hedwigSession
+				        .getHedwigProducerForSession()
+				        .getPublisher()
+				        .publish(ByteString.copyFromUtf8(((Topic) destination).getTopicName()),
+				                ((HedwigJMSMessage) jmsMessage).getHedwigMessage());
+			} catch (CouldNotConnectException e) {
+				JMSUtils.createJMSException("Cannot publish message: cannot connect to broker", e);
+			} catch (ServiceDownException e) {
+				JMSUtils.createJMSException("Cannot publish message: broker down?", e);
+			}
+		}
+	}
+
+	public boolean offerReceivedMessage(ByteString subscriberId, ByteString topicName,
 	        org.apache.hedwig.protocol.PubSubProtocol.Message message) {
 		lock.lock();
 		try {
 			HedwigJMSMessage jmsMessage = JMSMessageFactory.getMessage(hedwigSession, subscriberId, message);
+			if (unacknowledgedDeliveredMessageIds.isEmpty()) {
+				recovering = false;
+			}
+			undeliveredMessageIds.put(message.getMsgId(), new TopicNameAndSubscriberId(topicName, subscriberId));
 			if (recovering) {
-				if (unacknowledgedDeliveredMessageIds.contains(jmsMessage.getMessage().getMsgId())) {
+				if (unacknowledgedDeliveredMessageIds.containsKey(jmsMessage.getMessage().getMsgId())) {
 					jmsMessage.setDelivered();
-					unacknowledgedDeliveredMessageIds.remove(jmsMessage.getMessage().getMsgId());
-					if (unacknowledgedDeliveredMessageIds.isEmpty()) {
-						recovering = false;
-					}
 				}
 			}
 			boolean result = orderedReceivedMessagesBySubscriber.put(subscriberId, jmsMessage);
@@ -74,30 +167,28 @@ public class SessionMessageQueue {
 	}
 
 	public void unacknowledgedMessageDelivered(HedwigJMSMessage message) {
-		unacknowledgedDeliveredMessageIds.add(message.getMessage().getMsgId());
+		lastUnacknowledged = message.getMessage().getMsgId();
+		unacknowledgedDeliveredMessageIds.put(message.getMessage().getMsgId(),
+		        undeliveredMessageIds.remove(message.getMessage().getMsgId()));
 	}
 
 	public HedwigJMSMessage retrieve(ByteString subscriberId, boolean blocking, long time, TimeUnit timeUnit) {
 		lock.lock();
 		try {
 			List<HedwigJMSMessage> messages = orderedReceivedMessagesBySubscriber.get(subscriberId);
-			boolean exists = false;
 			if (messages.isEmpty()) {
 				try {
 					if (blocking) {
 						subscribersNotEmptyConditions.get(subscriberId).await();
-						exists = true;
 					} else {
-						exists = subscribersNotEmptyConditions.get(subscriberId).await(time, timeUnit);
+						subscribersNotEmptyConditions.get(subscriberId).await(time, timeUnit);
 					}
 
 				} catch (InterruptedException e) {
 					// TODO something
 				}
-			} else {
-				exists = true;
 			}
-			if (exists) {
+			if (!messages.isEmpty()) {
 				HedwigJMSMessage next = messages.remove(0);
 				try {
 					System.out.println("** returning " + next.getMessage().getMsgId() + " with delivered = "
@@ -118,9 +209,7 @@ public class SessionMessageQueue {
 	public HedwigJMSMessage blockingRetrieveAny() {
 		lock.lock();
 		try {
-			ArrayList<HedwigJMSMessage> values = ((ArrayList<HedwigJMSMessage>) orderedReceivedMessagesBySubscriber
-			        .values());
-			if (values.isEmpty()) {
+			if (orderedReceivedMessagesBySubscriber.isEmpty()) {
 				try {
 					notEmpty.await();
 				} catch (InterruptedException e) {
@@ -128,10 +217,53 @@ public class SessionMessageQueue {
 					e.printStackTrace();
 				}
 			}
-			HedwigJMSMessage next = values.remove(0);
+			Collection<HedwigJMSMessage> values = ((Collection<HedwigJMSMessage>) orderedReceivedMessagesBySubscriber
+			        .values());
+			HedwigJMSMessage next = values.iterator().next();
+			values.remove(next);
 			return next;
 		} finally {
 			lock.unlock();
+		}
+	}
+
+	private static class MessageWithDestination {
+
+		Destination destination;
+		HedwigJMSMessage message;
+
+		public MessageWithDestination(Destination destination, HedwigJMSMessage message) {
+			super();
+			this.destination = destination;
+			this.message = message;
+		}
+
+		public Destination getDestination() {
+			return destination;
+		}
+
+		public HedwigJMSMessage getMessage() {
+			return message;
+		}
+
+	}
+
+	private static class TopicNameAndSubscriberId {
+		ByteString topicName;
+		ByteString subscriberId;
+
+		public TopicNameAndSubscriberId(ByteString topicName, ByteString subscriberId) {
+			super();
+			this.topicName = topicName;
+			this.subscriberId = subscriberId;
+		}
+
+		public ByteString getTopicName() {
+			return topicName;
+		}
+
+		public ByteString getSubscriberId() {
+			return subscriberId;
 		}
 	}
 

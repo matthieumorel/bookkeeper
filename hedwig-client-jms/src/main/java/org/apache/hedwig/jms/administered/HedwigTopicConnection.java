@@ -20,9 +20,6 @@ public class HedwigTopicConnection extends HedwigConnection implements TopicConn
 
 	@Override
 	public TopicSession createTopicSession(boolean transacted, int acknowledgementMode) throws JMSException {
-		if (transacted) {
-			throw new UnsupportedOperationException("Hedwig currently only supports non-transacted sessions");
-		}
 		return new HedwigTopicSession(this, acknowledgementMode);
 	}
 
