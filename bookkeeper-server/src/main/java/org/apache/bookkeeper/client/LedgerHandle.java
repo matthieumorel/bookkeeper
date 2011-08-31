@@ -29,6 +29,7 @@ import java.util.Enumeration;
 import java.util.Queue;
 import java.util.concurrent.Semaphore;
 
+import org.apache.bookkeeper.client.AsyncCallback.ReadLastConfirmedCallback;
 import org.apache.bookkeeper.client.BKException;
 import org.apache.bookkeeper.client.AsyncCallback.AddCallback;
 import org.apache.bookkeeper.client.AsyncCallback.CloseCallback;
@@ -51,9 +52,10 @@ import org.jboss.netty.buffer.ChannelBuffer;
  * Ledger handle contains ledger metadata and is used to access the read and
  * write operations to a ledger.
  */
-public class LedgerHandle implements ReadCallback, AddCallback, CloseCallback {
+public class LedgerHandle implements ReadCallback, AddCallback, CloseCallback, ReadLastConfirmedCallback {
   final static Logger LOG = Logger.getLogger(LedgerHandle.class);
-
+  final static long LAST_ADD_CONFIRMED = -1;
+  
   final byte[] ledgerKey;
   final LedgerMetadata metadata;
   final BookKeeper bk;
@@ -317,23 +319,37 @@ public class LedgerHandle implements ReadCallback, AddCallback, CloseCallback {
     }
   }
 
-  /**
-   * Add entry synchronously to an open ledger.
-   * 
-   * @param data
-   *         array of bytes to be written to the ledger
-   */
+    /**
+     * Add entry synchronously to an open ledger.
+     * 
+     * @param data
+     *         array of bytes to be written to the ledger
+     */
+    public long addEntry(byte[] data) throws InterruptedException, BKException {
+        return addEntry(data, 0, data.length);
+    }
 
-  public long addEntry(byte[] data) throws InterruptedException, BKException {
-    LOG.debug("Adding entry " + data);
-    SyncCounter counter = new SyncCounter();
-    counter.inc();
+    /**
+     * Add entry synchronously to an open ledger.
+     * 
+     * @param data
+     *         array of bytes to be written to the ledger
+     * @param offset
+     *          offset from which to take bytes from data
+     * @param length
+     *          number of bytes to take from data
+     */
+    public long addEntry(byte[] data, int offset, int length) 
+            throws InterruptedException, BKException {
+        LOG.debug("Adding entry " + data);
+        SyncCounter counter = new SyncCounter();
+        counter.inc();
+        
+        asyncAddEntry(data, offset, length, this, counter);
+        counter.block(0);
 
-    asyncAddEntry(data, this, counter);
-    counter.block(0);
-
-    return counter.getrc();
-  }
+        return counter.getrc();
+    }
 
   /**
    * Add entry asynchronously to an open ledger.
@@ -345,42 +361,127 @@ public class LedgerHandle implements ReadCallback, AddCallback, CloseCallback {
    * @param ctx
    *          some control object
    */
-  public void asyncAddEntry(final byte[] data, final AddCallback cb,
-      final Object ctx) {
-      try{
-          opCounterSem.acquire();
-      } catch (InterruptedException e) {
-          cb.addComplete(BKException.Code.InterruptedException,
-                  LedgerHandle.this, -1, ctx);
+    public void asyncAddEntry(final byte[] data, final AddCallback cb, 
+                              final Object ctx) {
+        asyncAddEntry(data, 0, data.length, cb, ctx);
+    }
+
+    /**
+     * Add entry asynchronously to an open ledger, using an offset and range.
+     * 
+     * @param data
+     *          array of bytes to be written
+     * @param offset
+     *          offset from which to take bytes from data
+     * @param length
+     *          number of bytes to take from data
+     * @param cb
+     *          object implementing callbackinterface
+     * @param ctx
+     *          some control object
+     * @throws ArrayIndexOutOfBoundsException if offset or length is negative or 
+     *          offset and length sum to a value higher than the length of data.
+     */
+    public void asyncAddEntry(final byte[] data, final int offset, final int length, 
+                              final AddCallback cb, final Object ctx) {
+        if (offset < 0 || length < 0
+            || (offset + length) > data.length) {
+            throw new ArrayIndexOutOfBoundsException(
+                    "Invalid values for offset("+offset
+                    +") or length("+length+")");
+        }
+        try{
+            opCounterSem.acquire();
+        } catch (InterruptedException e) {
+            cb.addComplete(BKException.Code.InterruptedException,
+                    LedgerHandle.this, -1, ctx);
+        }
+        
+        try{
+            bk.mainWorkerPool.submitOrdered(ledgerId, new SafeRunnable() {
+                    @Override
+                    public void safeRun() {
+                        if (metadata.isClosed()) {
+                            LOG.warn("Attempt to add to closed ledger: " + ledgerId);
+                            LedgerHandle.this.opCounterSem.release();
+                            cb.addComplete(BKException.Code.LedgerClosedException,
+                                           LedgerHandle.this, -1, ctx);
+                            return;
+                        }
+                        
+                        long entryId = ++lastAddPushed;
+                        long currentLength = addToLength(length);
+                        PendingAddOp op = new PendingAddOp(LedgerHandle.this, cb, ctx, entryId);
+                        pendingAddOps.add(op);
+                        ChannelBuffer toSend = macManager.computeDigestAndPackageForSending(
+                                entryId, lastAddConfirmed, currentLength, data, offset, length);
+                        op.initiate(toSend);
+                    }
+                });
+        } catch (RuntimeException e) {
+            opCounterSem.release();
+            throw e;
+        }
+    }
+
+  /**
+   * Obtains last confirmed write from a quorum of bookies.
+   * 
+   * @param cb
+   * @param ctx
+   */
+  
+  public void asyncReadLastConfirmed(ReadLastConfirmedCallback cb, Object ctx){
+      new ReadLastConfirmedOp(this, cb, ctx).initiate();
+  }
+  
+  
+  /**
+   * Context objects for synchronous call to read last confirmed. 
+   */
+  class LastConfirmedCtx {
+      long response;
+      int rc;
+      
+      LastConfirmedCtx(){
+          this.response = -1;
       }
       
-      try{
-          bk.mainWorkerPool.submitOrdered(ledgerId, new SafeRunnable() {
-              @Override
-              public void safeRun() {
-                  if (metadata.isClosed()) {
-                      LOG.warn("Attempt to add to closed ledger: " + ledgerId);
-                      LedgerHandle.this.opCounterSem.release();
-                      cb.addComplete(BKException.Code.LedgerClosedException,
-                              LedgerHandle.this, -1, ctx);
-                      return;
-                  }
-
-                  long entryId = ++lastAddPushed;
-                  long currentLength = addToLength(data.length);
-                  PendingAddOp op = new PendingAddOp(LedgerHandle.this, cb, ctx, entryId);
-                  pendingAddOps.add(op);
-                  ChannelBuffer toSend = macManager.computeDigestAndPackageForSending(
-                          entryId, lastAddConfirmed, currentLength, data);
-                  op.initiate(toSend);
-              }
-          });
-      } catch (RuntimeException e) {
-          opCounterSem.release();
-          throw e;
+      void setLastConfirmed(long lastConfirmed){
+          this.response = lastConfirmed;
+      }
+      
+      long getlastConfirmed(){
+          return this.response;
+      }
+      
+      void setRC(int rc){
+          this.rc = rc;
+      }
+      
+      int getRC(){
+          return this.rc;
+      }
+      
+      boolean ready(){
+          return (this.response != -1);
       }
   }
-
+  
+  public long readLastConfirmed()
+  throws InterruptedException, BKException {   
+      LastConfirmedCtx ctx = new LastConfirmedCtx();
+      asyncReadLastConfirmed(this, ctx);
+      synchronized(ctx){
+          while(!ctx.ready()){
+              ctx.wait();
+          }
+      }
+      
+      if(ctx.getRC() != BKException.Code.OK) throw BKException.create(ctx.getRC());
+      return ctx.getlastConfirmed();
+  }
+  
   // close the ledger and send fails to all the adds in the pipeline
   void handleUnrecoverableErrorDuringAdd(int rc) {
     asyncClose(NoopCloseCallback.instance, null, rc);
@@ -527,6 +628,21 @@ public class LedgerHandle implements ReadCallback, AddCallback, CloseCallback {
     counter.dec();
   }
 
+  
+
+  /**
+   * Implementation of  callback interface for synchronous read last confirmed method.
+   */
+  public void readLastConfirmedComplete(int rc, long lastConfirmed, Object ctx) {
+      LastConfirmedCtx lcCtx = (LastConfirmedCtx) ctx;
+      
+      synchronized(lcCtx){
+          lcCtx.setRC(rc);
+          lcCtx.setLastConfirmed(lastConfirmed);
+          lcCtx.notify();
+      }
+  }
+  
   /**
    * Close callback method
    * 

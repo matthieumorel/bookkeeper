@@ -39,6 +39,8 @@ import org.apache.bookkeeper.tools.BookKeeperTools;
 import org.apache.log4j.Logger;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.KeeperException.Code;
+import org.apache.zookeeper.WatchedEvent;
+import org.apache.zookeeper.Watcher;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -155,20 +157,24 @@ public class BookieRecoveryTest extends BaseTestCase {
      * @throws IOException
      */
     private void startNewBookie(int port)
-    throws IOException, InterruptedException {
+    throws IOException, InterruptedException, KeeperException {
         File f = File.createTempFile("bookie", "test");
         tmpDirs.add(f);
         f.delete();
         f.mkdir();
+        
         BookieServer server = new BookieServer(port, HOSTPORT, f, new File[] { f });
         server.start();
         bs.add(server);
-        while(!server.isRunning()){
+        
+        while(bkc.getZkHandle().exists("/ledgers/available/" + InetAddress.getLocalHost().getHostAddress() + ":" + port, false) == null){
             Thread.sleep(500);
         }
+        
+        bkc.readBookiesBlocking();
         LOG.info("New bookie on port " + port + " has been created.");
     }
-
+    
     /**
      * Helper method to verify that we can read the recovered ledger entries.
      * 
@@ -277,7 +283,7 @@ public class BookieRecoveryTest extends BaseTestCase {
         LOG.info("Finished writing all ledger entries so shutdown one of the bookies.");
         bs.get(0).shutdown();
         bs.remove(0);
-
+        
         // Startup three new bookie servers
         for (int i = 0; i < 3; i++) {
             int newBookiePort = initialPort + numBookies + i;
@@ -331,7 +337,7 @@ public class BookieRecoveryTest extends BaseTestCase {
         LOG.info("Finished writing all ledger entries so shutdown one of the bookies.");
         bs.get(0).shutdown();
         bs.remove(0);
-
+        
         // Startup a new bookie server
         int newBookiePort = initialPort + numBookies;
         startNewBookie(newBookiePort);

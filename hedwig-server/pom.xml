@@ -28,7 +28,6 @@
   </properties>
   <artifactId>hedwig-server</artifactId>
   <packaging>jar</packaging>
-  <version>3.4.0-SNAPSHOT</version>
   <name>hedwig-server</name>
   <url>http://maven.apache.org</url>
   <dependencies>
@@ -41,8 +40,9 @@
     <dependency>
       <groupId>org.apache.bookkeeper</groupId>
       <artifactId>hedwig-client</artifactId>
-      <version>3.4.0-SNAPSHOT</version>
+      <version>${project.parent.version}</version>
       <scope>compile</scope>
+      <type>jar</type>
     </dependency>
     <dependency>
     	<groupId>org.apache.derby</groupId>
@@ -65,34 +65,13 @@
     <dependency>
       <groupId>org.apache.bookkeeper</groupId>
       <artifactId>bookkeeper-server</artifactId>
-      <version>3.4.0-SNAPSHOT</version>
+      <version>${project.parent.version}</version>
       <scope>compile</scope>
+      <type>jar</type>
     </dependency>
   </dependencies>
   <build>
     <plugins>
-      <plugin>
-        <artifactId>maven-assembly-plugin</artifactId>
-        <configuration>
-          <descriptorRefs>
-            <descriptorRef>jar-with-dependencies</descriptorRef>
-          </descriptorRefs>
-          <archive>
-            <manifest>
-              <mainClass>${mainclass}</mainClass>
-            </manifest>
-          </archive>
-        </configuration>
-        <executions>
-          <execution>
-            <id>make-assembly</id>
-            <phase>package</phase>
-            <goals>
-              <goal>attached</goal>
-            </goals>
-          </execution>
-        </executions>
-      </plugin>
 <!--
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>

@@ -20,3 +20,36 @@ BUGFIXES:
 
   BOOKKEEPER-30: Test are too noisy (ivank via fpj)
 
+  BOOKKEEPER-11: Read from open ledger (fpj via ivank)
+
+  BOOKKEEPER-27: mvn site failed with unresolved dependencies (ivank via fpj)
+  
+  BOOKKEEPER-29: BookieRecoveryTest fails intermittently (fpj via ivank)
+
+  BOOKKEEPER-33: Add length and offset parameter to addEntry (ivank via fpj)
+
+  BOOKKEEPER-29: BookieRecoveryTest fails intermittently (ivank, fpj via fpj)
+
+  BOOKKEEPER-38: Bookie Server doesn't exit when its zookeeper session is expired. So the process is hang there. (Sijie Guo via breed)
+
+  BOOKKEEPER-58: Changes introduced in BK-38 cause BookieClientTest to hang indefinitely. (ivank)
+
+  BOOKKEEPER-18: maven build is unstable (morel, ivank via ivank)
+
+ hedwig-server/
+
+  BOOKKEEPER-43: NullPointException when releasing topic (Sijie Guo via breed)
+  
+  BOOKKEEPER-51: NullPointException at FIFODeliveryManager#deliveryPtrs (xulei via ivank)
+
+ hedwig-client/
+ 
+  BOOKKEEPER-52: Message sequence confuse due to the subscribeMsgQueue@SubscribeResponseHandler (xulei via ivank)
+
+IMPROVEMENTS:
+
+ BOOKKEEPER-28: Create useful startup scripts for bookkeeper and hedwig (ivank)
+
+ hedwig-client/
+
+  BOOKKEEPER-44: Reuse publish channel to default server to avoid too many connect requests to default server when lots of producers came in same time (Sijie Guo via breed)
