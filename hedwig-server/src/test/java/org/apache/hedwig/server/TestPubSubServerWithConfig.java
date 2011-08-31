@@ -5,12 +5,9 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.MalformedURLException;
-import java.util.ArrayList;
-import java.util.List;
 
 import junit.framework.Assert;
 
-import org.apache.bookkeeper.proto.BookieServer;
 import org.apache.commons.configuration.ConfigurationException;
 import org.apache.hedwig.server.common.ServerConfiguration;
 import org.apache.hedwig.server.netty.PubSubServer;
@@ -85,8 +82,8 @@ public class TestPubSubServerWithConfig {
 			hedwigServer = new PubSubServer(serverConf);
 		} catch (Exception e) {
 			e.printStackTrace();
-			Assert.fail("failed to instantiate hedwig pub sub server");
 		}
+		Assert.assertNotNull("failed to instantiate hedwig pub sub server");
 
 		hedwigServer.shutdown();
 		serverFactory.shutdown();
