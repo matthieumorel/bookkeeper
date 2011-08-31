@@ -8,6 +8,7 @@ import java.util.TimerTask;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
+import javax.jms.IllegalStateException;
 import javax.jms.JMSException;
 import javax.jms.Message;
 import javax.jms.Session;
@@ -21,7 +22,7 @@ import javax.jms.TopicSubscriber;
 import javax.naming.Context;
 import javax.naming.InitialContext;
 
-import org.apache.hedwig.client.conf.ClientConfiguration;
+import org.apache.hedwig.jms.administered.HedwigTopicConnection;
 import org.apache.hedwig.server.common.ServerConfiguration;
 import org.apache.hedwig.server.netty.PubSubServer;
 import org.junit.Assert;
@@ -30,12 +31,17 @@ import org.junit.Test;
 public class TestSimplePubSub extends HedwigJMSBaseTest {
 
 	static final int MAX_MESSAGES = 1000;
+	private TopicSession subscriberTopicSession;
+	private TopicSession publisherTopicSession;
+	private TopicConnection subscriberTopicConnection;
+	private TopicConnection publisherTopicConnection;
+	private TopicPublisher topicPublisher;
+	private TopicSubscriber subscriber;
 
 	@Test
 	public void testTopicProducerConsumer() throws Exception {
 
-		ClientConfiguration clientConf = new ClientConfiguration();
-		clientConf.loadConf(hedwigConfigFile.toURI().toURL());
+		System.setProperty(HedwigTopicConnection.HEDWIG_CLIENT_CONFIG_FILE, hedwigConfigFile.getAbsolutePath());
 
 		ServerConfiguration serverConf = new ServerConfiguration();
 		serverConf.loadConf(hedwigConfigFile.toURI().toURL());
@@ -45,24 +51,24 @@ public class TestSimplePubSub extends HedwigJMSBaseTest {
 		TopicConnectionFactory topicConnectionFactoryPublisher = (TopicConnectionFactory) jndiContext
 		        .lookup("TopicConnectionFactory");
 		Topic topic = (Topic) jndiContext.lookup("topic.Topic1");
-		TopicConnection topicConnection = topicConnectionFactoryPublisher.createTopicConnection();
-		TopicSession topicSession = topicConnection.createTopicSession(false, Session.CLIENT_ACKNOWLEDGE);
+		publisherTopicConnection = topicConnectionFactoryPublisher.createTopicConnection();
+		publisherTopicSession = publisherTopicConnection.createTopicSession(false, Session.CLIENT_ACKNOWLEDGE);
 
 		TopicConnectionFactory topicConnectionFactorySubscriber = (TopicConnectionFactory) jndiContext
 		        .lookup("TopicConnectionFactory");
-		TopicConnection topicConnectionSubscriber = topicConnectionFactorySubscriber.createTopicConnection();
-		TopicSession topicSessionSubscriber = topicConnectionSubscriber.createTopicSession(false,
-		        Session.CLIENT_ACKNOWLEDGE);
-		final TopicSubscriber subscriber = topicSessionSubscriber.createSubscriber(topic);
+		subscriberTopicConnection = topicConnectionFactorySubscriber.createTopicConnection();
+		subscriberTopicSession = subscriberTopicConnection.createTopicSession(false, Session.CLIENT_ACKNOWLEDGE);
+		subscriber = subscriberTopicSession.createSubscriber(topic);
 		// since the subscriber only receives
 		// messages published *after* the subscription operation, we must
 		// create the subscriber now
 		Thread.sleep(4000);
 
-		TopicPublisher topicPublisher = topicSession.createPublisher(topic);
+		topicPublisher = publisherTopicSession.createPublisher(topic);
 		for (int i = 0; i < MAX_MESSAGES; i++) {
-			TextMessage message = topicSession.createTextMessage();
+			TextMessage message = publisherTopicSession.createTextMessage();
 			message.setText("message #" + i);
+			System.out.println("Sent message #" + i);
 			topicPublisher.publish(message);
 		}
 
@@ -85,11 +91,11 @@ public class TestSimplePubSub extends HedwigJMSBaseTest {
 		}, 0);
 
 		Assert.assertFalse(signalMessageReceived.await(2, TimeUnit.SECONDS));
-		topicConnectionSubscriber.start();
+		subscriberTopicConnection.start();
 		Assert.assertTrue(signalMessageReceived.await(2, TimeUnit.SECONDS));
 		int i;
 		for (i = 1; i < MAX_MESSAGES; i++) {
-			Message received = subscriber.receive(1000);
+			Message received = subscriber.receive(2000);
 			Assert.assertTrue(received instanceof TextMessage);
 			Assert.assertEquals("message #" + i, ((TextMessage) received).getText());
 		}
@@ -99,17 +105,17 @@ public class TestSimplePubSub extends HedwigJMSBaseTest {
 
 	@Test
 	public void testNoDeliveryUntilConnectionStarted() throws Exception, MalformedURLException {
-		ClientConfiguration clientConf = new ClientConfiguration();
-		clientConf.loadConf(hedwigConfigFile.toURI().toURL());
+		System.setProperty(HedwigTopicConnection.HEDWIG_CLIENT_CONFIG_FILE, hedwigConfigFile.getAbsolutePath());
 
 		ServerConfiguration serverConf = new ServerConfiguration();
 		serverConf.loadConf(hedwigConfigFile.toURI().toURL());
 
 		hedwigServer = new PubSubServer(serverConf);
-		final Context jndiContext = new InitialContext();
+		Context jndiContext = new InitialContext();
+
 		TopicConnectionFactory topicConnectionFactoryPublisher = (TopicConnectionFactory) jndiContext
 		        .lookup("TopicConnectionFactory");
-		final Topic topic = (Topic) jndiContext.lookup("topic.Topic1");
+		Topic topic = (Topic) jndiContext.lookup("topic.Topic1");
 		TopicConnection topicConnection = topicConnectionFactoryPublisher.createTopicConnection();
 		TopicSession topicSession = topicConnection.createTopicSession(false, Session.CLIENT_ACKNOWLEDGE);
 
@@ -117,7 +123,7 @@ public class TestSimplePubSub extends HedwigJMSBaseTest {
 		final CountDownLatch signalReceived = new CountDownLatch(1);
 		TopicConnectionFactory subscriberTopicConnectionFactory = (TopicConnectionFactory) jndiContext
 		        .lookup("TopicConnectionFactory");
-		final TopicConnection subscriberTopicConnection = subscriberTopicConnectionFactory.createTopicConnection();
+		TopicConnection subscriberTopicConnection = subscriberTopicConnectionFactory.createTopicConnection();
 		TopicSession subscriberTopicSession = subscriberTopicConnection.createTopicSession(false,
 		        Session.CLIENT_ACKNOWLEDGE);
 		final TopicSubscriber subscriber = subscriberTopicSession.createSubscriber(topic);
@@ -158,6 +164,29 @@ public class TestSimplePubSub extends HedwigJMSBaseTest {
 		Assert.assertTrue(receivedMessage instanceof TextMessage);
 		Assert.assertEquals("message", ((TextMessage) receivedMessage).getText());
 
+	}
+
+	@Test
+	public void testConnectionStop() throws Exception {
+		testTopicProducerConsumer();
+		TextMessage message = publisherTopicSession.createTextMessage("blah");
+		subscriberTopicConnection.close();
+		boolean cannotReceive = false;
+		try {
+			subscriber.receive();
+		} catch (IllegalStateException e) {
+			cannotReceive = true;
+		}
+		Assert.assertTrue(cannotReceive);
+
+		publisherTopicConnection.close();
+		boolean cannotSend = false;
+		try {
+			topicPublisher.send(message);
+		} catch (IllegalStateException e) {
+			cannotSend = true;
+		}
+		Assert.assertTrue(cannotSend);
 	}
 
 }

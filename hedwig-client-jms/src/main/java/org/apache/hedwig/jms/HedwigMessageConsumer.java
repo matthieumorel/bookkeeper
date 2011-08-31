@@ -1,12 +1,10 @@
 package org.apache.hedwig.jms;
 
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
+import javax.jms.IllegalStateException;
 import javax.jms.JMSException;
 import javax.jms.Message;
 import javax.jms.MessageConsumer;
@@ -36,27 +34,16 @@ public class HedwigMessageConsumer implements MessageConsumer, MessageHandler {
 	protected ByteString subscriberId;
 	protected HedwigSession hedwigSession;
 	Lock connectionStateLock = new ReentrantLock();
-	Condition started = connectionStateLock.newCondition();
 	MessageListener messageListener;
 	private HedwigClient hedwigClient;
 
-	public HedwigMessageConsumer(HedwigSession session, ByteString topicName) {
+	public HedwigMessageConsumer(HedwigSession session, ByteString topicName, ClientConfiguration hedwigClientConfig) {
 		this.topicName = topicName;
 		this.hedwigSession = session;
 		this.subscriberId = ByteString.copyFromUtf8(ClientIdGenerator.getNewClientId());
 		try {
-			ClientConfiguration config = new ClientConfiguration();
-			try {
-				config.loadConf(new URL(null, "classpath://hedwig-client.cfg", new FileURLHandler(ClassLoader
-				        .getSystemClassLoader())));
-				this.hedwigClient = new HedwigClient(config);
-			} catch (MalformedURLException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			} catch (org.apache.commons.configuration.ConfigurationException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
+			this.hedwigClient = new HedwigClient(hedwigClientConfig);
+
 			hedwigClient.getSubscriber().subscribe(topicName, subscriberId, CreateOrAttach.CREATE_OR_ATTACH);
 			hedwigSession.addConsumer(subscriberId, this);
 		} catch (CouldNotConnectException e) {
@@ -67,6 +54,12 @@ public class HedwigMessageConsumer implements MessageConsumer, MessageHandler {
 			e.printStackTrace();
 		} catch (InvalidSubscriberIdException e) {
 			e.printStackTrace();
+		}
+	}
+
+	private void checkSessionNotClosed() throws IllegalStateException {
+		if (hedwigSession.isClosed()) {
+			throw new IllegalStateException("Session is closed");
 		}
 	}
 
@@ -84,17 +77,20 @@ public class HedwigMessageConsumer implements MessageConsumer, MessageHandler {
 
 	@Override
 	public String getMessageSelector() throws JMSException {
+		checkSessionNotClosed();
 		// TODO Auto-generated method stub
 		return null;
 	}
 
 	@Override
 	public MessageListener getMessageListener() throws JMSException {
+		checkSessionNotClosed();
 		return messageListener;
 	}
 
 	@Override
 	public void setMessageListener(MessageListener listener) throws JMSException {
+		checkSessionNotClosed();
 		this.messageListener = listener;
 		hedwigSession.addListener(subscriberId, listener);
 	}
@@ -115,6 +111,7 @@ public class HedwigMessageConsumer implements MessageConsumer, MessageHandler {
 	}
 
 	private Message doReceive(long timeout) throws JMSException {
+		checkSessionNotClosed();
 		try {
 			hedwigSession.getHedwigConnection().waitUntilStarted();
 		} catch (InterruptedException e1) {
@@ -122,11 +119,6 @@ public class HedwigMessageConsumer implements MessageConsumer, MessageHandler {
 			e1.printStackTrace();
 		}
 
-		try {
-			getHedwigClient().getSubscriber().startDelivery(topicName, subscriberId, this);
-		} catch (ClientNotSubscribedException e) {
-			throw JMSUtils.createJMSException("Cannot receive message", e);
-		}
 		HedwigJMSMessage retrieved = null;
 		if (timeout == 0) {
 			retrieved = hedwigSession.takeNextMessage(subscriberId);
@@ -146,7 +138,20 @@ public class HedwigMessageConsumer implements MessageConsumer, MessageHandler {
 
 	@Override
 	public void close() throws JMSException {
-		// TODO Auto-generated method stub
+		try {
+			getHedwigClient().getSubscriber().unsubscribe(topicName, subscriberId);
+		} catch (ClientNotSubscribedException e) {
+			throw JMSUtils.createJMSException(
+			        "Internal error: this consumer is not subscribed to the broker with topic "
+			                + topicName.toStringUtf8() + "]", e);
+		} catch (CouldNotConnectException e) {
+			throw JMSUtils.createJMSException(
+			        "Internal error: cannot connect to the broker for propertly closing this consumer", e);
+		} catch (ServiceDownException e) {
+			throw JMSUtils.createJMSException("Internal error: broker is down", e);
+		} catch (InvalidSubscriberIdException e) {
+			throw JMSUtils.createJMSException("Internal error: wrong client id", e);
+		}
 
 	}
 
@@ -154,7 +159,6 @@ public class HedwigMessageConsumer implements MessageConsumer, MessageHandler {
 	public synchronized void consume(ByteString topic, ByteString subscriberId,
 	        org.apache.hedwig.protocol.PubSubProtocol.Message msg, Callback<Void> callback, Object context) {
 		if (this.topicName.equals(topic) && this.subscriberId.equals(subscriberId)) {
-			System.out.println("--> " + msg.getBody().toStringUtf8());
 			// serialize access to messages through the session
 			hedwigSession.offerReceivedMessage(msg, topicName, subscriberId);
 		}
@@ -162,6 +166,7 @@ public class HedwigMessageConsumer implements MessageConsumer, MessageHandler {
 	}
 
 	public void acknowledge(MessageSeqId messageId) throws JMSException {
+		checkSessionNotClosed();
 		try {
 			// tell hedwig
 			hedwigClient.getSubscriber().consume(topicName, subscriberId, messageId);
@@ -174,12 +179,20 @@ public class HedwigMessageConsumer implements MessageConsumer, MessageHandler {
 		}
 	}
 
-	public void signalStarted() {
-		started.signal();
+	public void start() throws JMSException {
+		try {
+			getHedwigClient().getSubscriber().startDelivery(topicName, subscriberId, this);
+		} catch (ClientNotSubscribedException e) {
+			throw JMSUtils.createJMSException("Cannot start delivery of messages", e);
+		}
 	}
 
-	public void signalStopped() {
-		connectionStateLock.lock();
+	public void stop() throws JMSException {
+		try {
+			getHedwigClient().getSubscriber().stopDelivery(topicName, subscriberId);
+		} catch (ClientNotSubscribedException e) {
+			throw JMSUtils.createJMSException("Cannot stop delivery of messages", e);
+		}
 	}
 
 }

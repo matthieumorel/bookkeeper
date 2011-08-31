@@ -45,8 +45,6 @@ public class SessionMessageQueue {
 	HedwigSession hedwigSession;
 	List<MessageWithDestination> pendingMessagesToSend = new ArrayList<SessionMessageQueue.MessageWithDestination>();
 
-	// put messages by consumer's client id
-
 	public SessionMessageQueue(HedwigSession hedwigSession) {
 		this.hedwigSession = hedwigSession;
 	}
@@ -76,7 +74,6 @@ public class SessionMessageQueue {
 		while (iterator.hasNext()) {
 
 			MessageWithDestination next = iterator.next();
-			System.out.println("sending pending message ");
 
 			// TODO async publish?
 			try {
@@ -91,6 +88,7 @@ public class SessionMessageQueue {
 				throw JMSUtils.createJMSException("Cannot send pending message while committing transaction", e);
 			}
 		}
+		pendingMessagesToSend.clear();
 
 	}
 
@@ -206,16 +204,11 @@ public class SessionMessageQueue {
 		}
 	}
 
-	public HedwigJMSMessage blockingRetrieveAny() {
+	public HedwigJMSMessage blockingRetrieveAny() throws InterruptedException {
 		lock.lock();
 		try {
 			if (orderedReceivedMessagesBySubscriber.isEmpty()) {
-				try {
-					notEmpty.await();
-				} catch (InterruptedException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
+				notEmpty.await();
 			}
 			Collection<HedwigJMSMessage> values = ((Collection<HedwigJMSMessage>) orderedReceivedMessagesBySubscriber
 			        .values());

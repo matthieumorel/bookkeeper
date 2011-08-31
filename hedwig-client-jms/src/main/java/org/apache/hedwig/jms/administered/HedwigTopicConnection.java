@@ -20,7 +20,7 @@ public class HedwigTopicConnection extends HedwigConnection implements TopicConn
 
 	@Override
 	public TopicSession createTopicSession(boolean transacted, int acknowledgementMode) throws JMSException {
-		return new HedwigTopicSession(this, acknowledgementMode);
+		return new HedwigTopicSession(this, acknowledgementMode, hedwigClientConfig);
 	}
 
 }
