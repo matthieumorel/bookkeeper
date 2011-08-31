@@ -15,6 +15,7 @@ public class SessionControlThread extends Thread {
 	public SessionControlThread(SessionMessageQueue receivedMessages, HedwigSession session) {
 		this.receivedMessages = receivedMessages;
 		this.session = session;
+		setName("HedwigSessionControlThread");
 	}
 
 	@Override
@@ -26,7 +27,13 @@ public class SessionControlThread extends Thread {
 			} catch (InterruptedException ignored) {
 			}
 			try {
-				HedwigJMSMessage next = receivedMessages.blockingRetrieveAny();
+				HedwigJMSMessage next;
+				try {
+					next = receivedMessages.blockingRetrieveAny();
+				} catch (InterruptedException e) {
+					// session is closing
+					return;
+				}
 				MessageListener messageListener = session.getListeners().get(next.getSubscriberId());
 				messageListener.onMessage(JMSMessageFactory.getMessage(session, next.getSubscriberId(),
 				        next.getMessage()));

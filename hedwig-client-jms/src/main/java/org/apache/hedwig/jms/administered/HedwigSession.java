@@ -1,11 +1,10 @@
 package org.apache.hedwig.jms.administered;
 
 import java.io.Serializable;
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.concurrent.TimeUnit;
 
 import javax.jms.BytesMessage;
@@ -35,7 +34,6 @@ import org.apache.hedwig.exceptions.PubSubException.ClientAlreadySubscribedExcep
 import org.apache.hedwig.exceptions.PubSubException.ClientNotSubscribedException;
 import org.apache.hedwig.exceptions.PubSubException.CouldNotConnectException;
 import org.apache.hedwig.exceptions.PubSubException.ServiceDownException;
-import org.apache.hedwig.jms.FileURLHandler;
 import org.apache.hedwig.jms.HedwigMessageConsumer;
 import org.apache.hedwig.jms.message.HedwigJMSMessage;
 import org.apache.hedwig.jms.message.HedwigJMSTextMessage;
@@ -54,26 +52,44 @@ public class HedwigSession implements Session {
 	Map<ByteString, HedwigMessageConsumer> consumers = new HashMap<ByteString, HedwigMessageConsumer>();
 	int ackMode;
 	private HedwigClient hedwigClient;
+	volatile boolean isClosed = false;
 
-	public HedwigSession(HedwigConnection connection, int ackMode) {
+	public HedwigSession(HedwigConnection connection, int ackMode, ClientConfiguration clientConf) {
 		this.connection = connection;
 		this.ackMode = ackMode;
 		this.sessionMessageQueue = new SessionMessageQueue(this);
 		this.sessionControlThread = new SessionControlThread(sessionMessageQueue, this);
-		ClientConfiguration config = new ClientConfiguration();
-		try {
-			config.loadConf(new URL(null, "classpath://hedwig-client.cfg", new FileURLHandler(ClassLoader
-			        .getSystemClassLoader())));
-			// use 1 client per session for sending events
-			this.hedwigClient = new HedwigClient(config);
-		} catch (MalformedURLException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (org.apache.commons.configuration.ConfigurationException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+		// use 1 client per session for sending events
+		this.hedwigClient = new HedwigClient(clientConf);
 
+		connection.registerSession(this);
+
+	}
+
+	public void start() throws JMSException {
+		Iterator<Entry<ByteString, HedwigMessageConsumer>> iterator = consumers.entrySet().iterator();
+		while (iterator.hasNext()) {
+			HedwigMessageConsumer consumer = iterator.next().getValue();
+			consumer.start();
+		}
+	}
+
+	public void stop() throws JMSException {
+		Iterator<Entry<ByteString, HedwigMessageConsumer>> iterator = consumers.entrySet().iterator();
+		while (iterator.hasNext()) {
+			HedwigMessageConsumer consumer = iterator.next().getValue();
+			consumer.stop();
+		}
+	}
+
+	public boolean isClosed() {
+		return isClosed;
+	}
+
+	private void checkSessionNotClosed() throws IllegalStateException {
+		if (isClosed) {
+			throw new IllegalStateException("Session is closed");
+		}
 	}
 
 	public HedwigClient getHedwigProducerForSession() {
@@ -81,6 +97,7 @@ public class HedwigSession implements Session {
 	}
 
 	public void send(Destination destination, HedwigJMSMessage message) throws JMSException {
+		checkSessionNotClosed();
 		sessionMessageQueue.offerMessageToSend(destination, message);
 	}
 
@@ -121,6 +138,7 @@ public class HedwigSession implements Session {
 	}
 
 	public void addConsumer(ByteString subscriberId, HedwigMessageConsumer consumer) {
+
 		consumers.put(subscriberId, consumer);
 		sessionMessageQueue.addConsumer(subscriberId);
 	}
@@ -145,10 +163,6 @@ public class HedwigSession implements Session {
 		return sessionMessageQueue.offerReceivedMessage(subscriberId, topicName, message);
 	}
 
-	public HedwigJMSMessage takeNextMessage() {
-		return sessionMessageQueue.blockingRetrieveAny();
-	}
-
 	public HedwigJMSMessage takeNextMessage(ByteString subscriberId) {
 		return sessionMessageQueue.retrieve(subscriberId, true, 0, null);
 	}
@@ -158,13 +172,29 @@ public class HedwigSession implements Session {
 	}
 
 	@Override
-	public void close() throws JMSException {
-		// TODO Auto-generated method stub
+	public synchronized void close() throws JMSException {
+		if (!isClosed) {
+			// stop async delivery of received messages
+			sessionControlThread.interrupt();
+
+			if (Session.SESSION_TRANSACTED == ackMode) {
+				// TODO check what this means here: should we simply stop the
+				// connection, or should we start reception through recovery?
+				rollback();
+			}
+			// disconnect hedwig clients
+			for (HedwigMessageConsumer consumer : consumers.values()) {
+				consumer.getHedwigClient().stop();
+			}
+			sessionMessageQueue.clearPendingMessages();
+			isClosed = true;
+		}
 
 	}
 
 	@Override
 	public void commit() throws JMSException {
+		checkSessionNotClosed();
 		if (!getTransacted()) {
 			throw new IllegalStateException("Cannot commit a non-transacted session");
 		}
@@ -173,30 +203,35 @@ public class HedwigSession implements Session {
 
 	@Override
 	public QueueBrowser createBrowser(Queue arg0) throws JMSException {
+		checkSessionNotClosed();
 		// TODO Auto-generated method stub
 		return null;
 	}
 
 	@Override
 	public QueueBrowser createBrowser(Queue arg0, String arg1) throws JMSException {
+		checkSessionNotClosed();
 		// TODO Auto-generated method stub
 		return null;
 	}
 
 	@Override
 	public BytesMessage createBytesMessage() throws JMSException {
+		checkSessionNotClosed();
 		// TODO Auto-generated method stub
 		return null;
 	}
 
 	@Override
 	public MessageConsumer createConsumer(Destination destination) throws JMSException {
+		checkSessionNotClosed();
 		// TODO Auto-generated method stub
 		return null;
 	}
 
 	@Override
 	public MessageConsumer createConsumer(Destination destination, String messageSelector) throws JMSException {
+		checkSessionNotClosed();
 		// TODO Auto-generated method stub
 		return null;
 	}
@@ -204,6 +239,7 @@ public class HedwigSession implements Session {
 	@Override
 	public MessageConsumer createConsumer(Destination destination, String messageSelector, boolean noLocal)
 	        throws JMSException {
+		checkSessionNotClosed();
 		if (noLocal) {
 			throw new UnsupportedOperationException(
 			        "Hedwig currently cannot inhibit delivery of messages published by the same connection");
@@ -216,13 +252,15 @@ public class HedwigSession implements Session {
 		}
 		ByteString topicName = ByteString.copyFromUtf8(((Topic) destination).getTopicName());
 
-		HedwigMessageConsumer consumer = new HedwigMessageConsumer(this, topicName);
+		HedwigMessageConsumer consumer = new HedwigMessageConsumer(this, topicName, getHedwigConnection()
+		        .getHedwigClientConfig());
 		sessionMessageQueue.addConsumer(consumer.getSubscriberId());
 		return consumer;
 	}
 
 	@Override
 	public TopicSubscriber createDurableSubscriber(Topic arg0, String arg1) throws JMSException {
+		checkSessionNotClosed();
 		// TODO Auto-generated method stub
 		return null;
 	}
@@ -230,60 +268,70 @@ public class HedwigSession implements Session {
 	@Override
 	public TopicSubscriber createDurableSubscriber(Topic arg0, String arg1, String arg2, boolean arg3)
 	        throws JMSException {
+		checkSessionNotClosed();
 		// TODO Auto-generated method stub
 		return null;
 	}
 
 	@Override
 	public MapMessage createMapMessage() throws JMSException {
+		checkSessionNotClosed();
 		// TODO Auto-generated method stub
 		return null;
 	}
 
 	@Override
 	public Message createMessage() throws JMSException {
+		checkSessionNotClosed();
 		// TODO Auto-generated method stub
 		return null;
 	}
 
 	@Override
 	public ObjectMessage createObjectMessage() throws JMSException {
+		checkSessionNotClosed();
 		// TODO Auto-generated method stub
 		return null;
 	}
 
 	@Override
 	public ObjectMessage createObjectMessage(Serializable arg0) throws JMSException {
+		checkSessionNotClosed();
 		// TODO Auto-generated method stub
 		return null;
 	}
 
 	@Override
 	public MessageProducer createProducer(Destination arg0) throws JMSException {
+		checkSessionNotClosed();
 		// TODO Auto-generated method stub
 		return null;
 	}
 
 	@Override
 	public Queue createQueue(String arg0) throws JMSException {
+		checkSessionNotClosed();
 		// TODO Auto-generated method stub
 		return null;
 	}
 
 	@Override
 	public StreamMessage createStreamMessage() throws JMSException {
+		checkSessionNotClosed();
 		// TODO Auto-generated method stub
 		return null;
 	}
 
 	@Override
 	public TemporaryQueue createTemporaryQueue() throws JMSException {
+		checkSessionNotClosed();
 		// TODO Auto-generated method stub
 		return null;
 	}
 
 	@Override
 	public TemporaryTopic createTemporaryTopic() throws JMSException {
+		checkSessionNotClosed();
 		// TODO Auto-generated method stub
 		return null;
 	}
@@ -295,6 +343,7 @@ public class HedwigSession implements Session {
 
 	@Override
 	public TextMessage createTextMessage(String text) throws JMSException {
+		checkSessionNotClosed();
 		TextMessage textMessage = createTextMessage();
 		textMessage.setText(text);
 		return textMessage;
@@ -302,29 +351,34 @@ public class HedwigSession implements Session {
 
 	@Override
 	public Topic createTopic(String arg0) throws JMSException {
+		checkSessionNotClosed();
 		// TODO Auto-generated method stub
 		return null;
 	}
 
 	@Override
 	public int getAcknowledgeMode() throws JMSException {
+		checkSessionNotClosed();
 		// TODO Auto-generated method stub
 		return 0;
 	}
 
 	@Override
 	public MessageListener getMessageListener() throws JMSException {
+		checkSessionNotClosed();
 		// TODO Auto-generated method stub
 		return null;
 	}
 
 	@Override
 	public boolean getTransacted() throws JMSException {
+		checkSessionNotClosed();
 		return Session.SESSION_TRANSACTED == ackMode;
 	}
 
 	@Override
 	public void recover() throws JMSException {
+		checkSessionNotClosed();
 		// 1. stop message delivery
 		Iterator<HedwigMessageConsumer> iterator = consumers.values().iterator();
 		while (iterator.hasNext()) {
@@ -381,6 +435,7 @@ public class HedwigSession implements Session {
 
 	@Override
 	public void rollback() throws JMSException {
+		checkSessionNotClosed();
 		sessionMessageQueue.clearPendingMessages();
 		recover();
 	}
@@ -393,12 +448,14 @@ public class HedwigSession implements Session {
 
 	@Override
 	public void setMessageListener(MessageListener arg0) throws JMSException {
+		checkSessionNotClosed();
 		// TODO Auto-generated method stub
 
 	}
 
 	@Override
 	public void unsubscribe(String arg0) throws JMSException {
+		checkSessionNotClosed();
 		// TODO Auto-generated method stub
 
 	}

@@ -17,7 +17,7 @@ import javax.naming.InitialContext;
 import javax.naming.NamingException;
 
 import org.apache.commons.configuration.ConfigurationException;
-import org.apache.hedwig.client.conf.ClientConfiguration;
+import org.apache.hedwig.jms.administered.HedwigTopicConnection;
 import org.apache.hedwig.server.common.ServerConfiguration;
 import org.apache.hedwig.server.netty.PubSubServer;
 import org.junit.Assert;
@@ -47,14 +47,15 @@ public class TestACK extends HedwigJMSBaseTest {
 
 	private void testAckMode(int ackMode) throws ConfigurationException, MalformedURLException, Exception,
 	        NamingException, JMSException, InterruptedException {
-		ClientConfiguration clientConf = new ClientConfiguration();
-		clientConf.loadConf(hedwigConfigFile.toURI().toURL());
+
+		System.setProperty(HedwigTopicConnection.HEDWIG_CLIENT_CONFIG_FILE, hedwigConfigFile.getAbsolutePath());
 
 		ServerConfiguration serverConf = new ServerConfiguration();
 		serverConf.loadConf(hedwigConfigFile.toURI().toURL());
 
 		hedwigServer = new PubSubServer(serverConf);
 		Context jndiContext = new InitialContext();
+
 		TopicConnectionFactory topicConnectionFactoryPublisher = (TopicConnectionFactory) jndiContext
 		        .lookup("TopicConnectionFactory");
 		Topic topic = (Topic) jndiContext.lookup("topic.Topic1");
@@ -101,14 +102,14 @@ public class TestACK extends HedwigJMSBaseTest {
 	@Test
 	public void testClientACK() throws Exception {
 
-		ClientConfiguration clientConf = new ClientConfiguration();
-		clientConf.loadConf(hedwigConfigFile.toURI().toURL());
+		System.setProperty(HedwigTopicConnection.HEDWIG_CLIENT_CONFIG_FILE, hedwigConfigFile.getAbsolutePath());
 
 		ServerConfiguration serverConf = new ServerConfiguration();
 		serverConf.loadConf(hedwigConfigFile.toURI().toURL());
 
 		hedwigServer = new PubSubServer(serverConf);
 		Context jndiContext = new InitialContext();
+
 		TopicConnectionFactory topicConnectionFactoryPublisher = (TopicConnectionFactory) jndiContext
 		        .lookup("TopicConnectionFactory");
 		Topic topic = (Topic) jndiContext.lookup("topic.Topic1");
@@ -167,61 +168,60 @@ public class TestACK extends HedwigJMSBaseTest {
 	@Test
 	public void testTransaction() throws Exception {
 
-		ClientConfiguration clientConf = new ClientConfiguration();
-		clientConf.loadConf(hedwigConfigFile.toURI().toURL());
+		System.setProperty(HedwigTopicConnection.HEDWIG_CLIENT_CONFIG_FILE, hedwigConfigFile.getAbsolutePath());
 
 		ServerConfiguration serverConf = new ServerConfiguration();
 		serverConf.loadConf(hedwigConfigFile.toURI().toURL());
 
 		hedwigServer = new PubSubServer(serverConf);
 		Context jndiContext = new InitialContext();
-		TopicConnectionFactory topicConnectionFactory1 = (TopicConnectionFactory) jndiContext
+		TopicConnectionFactory topicConnectionFactoryA = (TopicConnectionFactory) jndiContext
 		        .lookup("TopicConnectionFactory");
 		Topic topic1 = (Topic) jndiContext.lookup("topic.Topic1");
 		final Topic topic2 = (Topic) jndiContext.lookup("topic.Topic2");
-		TopicConnection topicConnection1 = topicConnectionFactory1.createTopicConnection();
-		final TopicSession topicSession1 = topicConnection1.createTopicSession(false, Session.AUTO_ACKNOWLEDGE);
+		TopicConnection topicConnectionA = topicConnectionFactoryA.createTopicConnection();
+		final TopicSession topicSessionA = topicConnectionA.createTopicSession(false, Session.AUTO_ACKNOWLEDGE);
 
-		TopicConnectionFactory topicConnectionFactory2 = (TopicConnectionFactory) jndiContext
+		TopicConnectionFactory topicConnectionFactoryB = (TopicConnectionFactory) jndiContext
 		        .lookup("TopicConnectionFactory");
-		TopicConnection topicConnection2 = topicConnectionFactory2.createTopicConnection();
-		final TopicSession topicSession2 = topicConnection2.createTopicSession(false, Session.SESSION_TRANSACTED);
+		TopicConnection topicConnectionB = topicConnectionFactoryB.createTopicConnection();
+		final TopicSession topicSessionB = topicConnectionB.createTopicSession(false, Session.SESSION_TRANSACTED);
 
-		final TopicSubscriber subscriberToTopic1 = topicSession2.createSubscriber(topic1);
-		final TopicSubscriber subscriberToTopic2 = topicSession2.createSubscriber(topic2);
-		final TopicPublisher publisher2 = topicSession2.createPublisher(topic1);
+		final TopicSubscriber subscriberToTopic1 = topicSessionB.createSubscriber(topic1);
+		final TopicSubscriber subscriberToTopic2 = topicSessionB.createSubscriber(topic2);
+		final TopicPublisher publisherB = topicSessionB.createPublisher(topic1);
 
 		// since the subscriber only receives
 		// messages published *after* the subscription operation, we must
 		// create the subscribers now
 		Thread.sleep(4000);
 
-		TopicPublisher topicPublisher = topicSession1.createPublisher(topic1);
+		TopicPublisher topicPublisher = topicSessionA.createPublisher(topic1);
 		for (int i = 0; i < MAX_MESSAGES; i++) {
-			TextMessage message = topicSession1.createTextMessage();
+			TextMessage message = topicSessionA.createTextMessage();
 			message.setText("message #" + i);
 			topicPublisher.publish(message);
 		}
 
-		topicConnection2.start();
+		topicConnectionB.start();
 
 		int i;
 		for (i = 0; i < MAX_MESSAGES; i++) {
 			Message received = subscriberToTopic1.receive(1000);
 			Assert.assertTrue(received instanceof TextMessage);
 			Assert.assertEquals("message #" + i, ((TextMessage) received).getText());
-			publisher2.send(topic2, topicSession1.createTextMessage("resending " + ((TextMessage) received).getText()));
 			Assert.assertFalse(received.getJMSRedelivered());
+			publisherB.send(topic2, topicSessionA.createTextMessage("resending " + ((TextMessage) received).getText()));
 			if (i == COMMIT_INDEX) {
-				topicSession2.commit();
+				topicSessionB.commit();
 			}
 		}
 
 		Thread.sleep(1000);
-		topicSession2.rollback();
+		topicSessionB.rollback();
 
 		// for client acknowledge, we should only get messages after
-		// CLIENT_ACK_UNTIL
+		// COMMIT_INDEX
 		for (i = COMMIT_INDEX + 1; i < MAX_MESSAGES; i++) {
 			Message received = subscriberToTopic1.receive(1000);
 			Assert.assertTrue(received instanceof TextMessage);
@@ -242,8 +242,8 @@ public class TestACK extends HedwigJMSBaseTest {
 			// Assert.assertFalse(received.getJMSRedelivered());
 		}
 
-		// check there is no other message for topic 2
+		// check that messages > COMMIT_INDEX were not sent since there they
+		// were not committed
 		received = subscriberToTopic2.receive(5000);
-		Assert.assertNull(received);
 	}
 }

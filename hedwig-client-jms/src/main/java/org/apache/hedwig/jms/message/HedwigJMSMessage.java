@@ -3,6 +3,7 @@ package org.apache.hedwig.jms.message;
 import java.util.Enumeration;
 
 import javax.jms.Destination;
+import javax.jms.IllegalStateException;
 import javax.jms.JMSException;
 import javax.jms.Message;
 
@@ -56,7 +57,9 @@ public class HedwigJMSMessage implements Message {
 
 	@Override
 	public void acknowledge() throws JMSException {
-
+		if (hedwigSession.isClosed()) {
+			throw new IllegalStateException("Session is closed");
+		}
 		hedwigSession.getConsumer(subscriberId).acknowledge(getMessage().getMsgId());
 
 	}
