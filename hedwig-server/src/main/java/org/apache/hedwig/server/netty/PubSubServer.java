@@ -149,7 +149,7 @@ public class PubSubServer {
             zk = new ZooKeeper(conf.getZkHost(), conf.getZkTimeout(), new Watcher() {
                 @Override
                 public void process(WatchedEvent event) {
-                    if(Event.KeeperState.SyncConnected.equals(event)) {
+                    if(Event.KeeperState.SyncConnected.equals(event.getState())) {
                         signalZkReady.countDown();
                     }
                 }
@@ -290,7 +290,12 @@ public class PubSubServer {
                     CountDownLatch signalZkReady = new CountDownLatch(1);
                     instantiateZookeeperClient(signalZkReady);
                     // wait until connection is effective
-                    signalZkReady.await(conf.getZkTimeout()*2, TimeUnit.MILLISECONDS);
+                    if (!signalZkReady.await(conf.getZkTimeout()*2, TimeUnit.MILLISECONDS)) {
+                        logger.fatal("Could not establish connection with ZooKeeper after zk_timeout*2 = " +
+                                conf.getZkTimeout()*2 + " ms. (Default value for zk_timeout is 2000).");
+                        throw new Exception("Could not establish connection with ZooKeeper after zk_timeout*2 = " +
+                                conf.getZkTimeout()*2 + " ms. (Default value for zk_timeout is 2000).");
+                    }
                     tm = instantiateTopicManager();
                     pm = instantiatePersistenceManager(tm);
                     dm = new FIFODeliveryManager(pm, conf);
