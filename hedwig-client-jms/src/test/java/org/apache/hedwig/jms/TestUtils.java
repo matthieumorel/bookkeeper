@@ -13,12 +13,11 @@ import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.ZooDefs;
 import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.server.ServerCnxnFactory;
+import org.apache.zookeeper.server.ServerCnxnFactoryAccessor;
 import org.apache.zookeeper.server.ZKDatabase;
 import org.apache.zookeeper.server.ZooKeeperServer;
 import org.apache.zookeeper.test.ClientBase;
 import org.apache.zookeeper.test.JMXEnv;
-
-import com.j2speed.accessor.FieldAccessor;
 
 public class TestUtils {
 
@@ -77,21 +76,21 @@ public class TestUtils {
     }
 
     public static void writeStringToFile(String string, File f) throws IOException {
-    	if (f.exists()) {
-    		if (!f.delete()) {
-    			throw new RuntimeException("cannot create file " + f.getAbsolutePath());
-    		}
-    	}
-    	if (!f.createNewFile()) {
-    		throw new RuntimeException("cannot create new file " + f.getAbsolutePath());
-    	}
-    
-    	FileWriter fw = new FileWriter(f);
-    	fw.write(string);
-    	fw.close();
+        if (f.exists()) {
+            if (!f.delete()) {
+                throw new RuntimeException("cannot create file " + f.getAbsolutePath());
+            }
+        }
+        if (!f.createNewFile()) {
+            throw new RuntimeException("cannot create new file " + f.getAbsolutePath());
+        }
+
+        FileWriter fw = new FileWriter(f);
+        fw.write(string);
+        fw.close();
     }
 
-	static void shutdownServerInstance(ServerCnxnFactory factory, String hostPort) {
+    static void shutdownServerInstance(ServerCnxnFactory factory, String hostPort) {
         if (factory != null) {
             ZKDatabase zkDb;
             {
@@ -112,10 +111,7 @@ public class TestUtils {
     }
 
     protected static ZooKeeperServer getServer(ServerCnxnFactory fac) {
-        // access the private field - test only
-        FieldAccessor<ServerCnxnFactory, ZooKeeperServer> zkServerAcc = new FieldAccessor<ServerCnxnFactory, ZooKeeperServer>(
-                "zkServer", ServerCnxnFactory.class);
-        ZooKeeperServer zs = zkServerAcc.get(fac);
+        ZooKeeperServer zs = ServerCnxnFactoryAccessor.getZkServer(fac);
 
         return zs;
     }
