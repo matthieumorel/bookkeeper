@@ -30,7 +30,46 @@ message Message {
     required bytes body = 1;
     optional bytes srcRegion = 2;
     optional MessageSeqId msgId = 3;
+    repeated Key2Boolean booleanMetadata = 4;
+    repeated Key2Integer integerMetadata = 5;
+    repeated Key2Long longMetadata = 6;
+    repeated Key2Float floatMetadata = 7;
+    repeated Key2Double doubleMetadata = 8;
+    repeated Key2String stringMetadata = 9;
 }
+
+message Key2Boolean {
+    required string key = 1 ;
+    required bool value = 2;
+}
+
+message Key2Integer {
+    required string key = 1;
+    required sint32 value = 2;
+}
+
+message Key2Long {
+    required string key = 1;
+    required sint64 value = 2;
+}
+
+message Key2Float {
+    required string key = 1;
+    required float value = 2;
+}
+
+message Key2Double {
+    required string key = 1;
+    required double value = 2;
+}
+
+message Key2String {
+    required string key = 1;
+    required string value = 2;
+}
+
+
+
 
 message RegionSpecificSeqId {
     required bytes region = 1;
