@@ -25,6 +25,11 @@ import org.apache.hedwig.protocol.PubSubProtocol.Message.Builder;
 
 import com.google.protobuf.ByteString;
 
+// TODO This class is both read and written. The underlying message is a google protobuf message. 
+// A protocol buffer message can only be read once it is built. Once it is built, it cannot be modified.
+// Therefore, for now, to support consecutive and mixed reads and writes, we systematically build the underlying 
+// protobuf message and create a new builder from that message, for every write operation.
+// This surely is inefficient and is a good place to look for performance improvements!
 // TODO add checks on property keys
 // TODO add checks on property values
 // TODO implement all properties, probably using an extra map field in the message structure (for ttl etc...)
@@ -55,12 +60,15 @@ public class HedwigJMSMessage implements Message {
     public HedwigJMSMessage(HedwigSession hedwigSession) {
         builder = org.apache.hedwig.protocol.PubSubProtocol.Message.newBuilder();
         this.hedwigSession = hedwigSession;
+        hedwigMessage = builder.buildPartial();
+        builder = org.apache.hedwig.protocol.PubSubProtocol.Message.newBuilder(hedwigMessage);
     }
 
     public HedwigJMSMessage(HedwigSession hedwigSession, ByteString subscriberId,
             org.apache.hedwig.protocol.PubSubProtocol.Message hedwigMessage) {
         this.hedwigSession = hedwigSession;
         this.subscriberId = subscriberId;
+        builder = org.apache.hedwig.protocol.PubSubProtocol.Message.newBuilder(hedwigMessage);
         this.hedwigMessage = hedwigMessage;
     }
 
@@ -98,6 +106,16 @@ public class HedwigJMSMessage implements Message {
         } else {
             builder.addStringMetadata(Key2String.newBuilder().setKey(key).setValue(value).build());
         }
+        buildMessageAndPrepareNewBuilder();
+    }
+
+    /**
+     * Creates underlying hedwig protobuf message, that can be read, and
+     * prepares a new builder from that message.
+     */
+    protected void buildMessageAndPrepareNewBuilder() {
+        hedwigMessage = builder.buildPartial();
+        builder = org.apache.hedwig.protocol.PubSubProtocol.Message.newBuilder(hedwigMessage);
     }
 
     private void addBooleanMetadata(String key, Boolean value) {
@@ -114,6 +132,7 @@ public class HedwigJMSMessage implements Message {
         } else {
             builder.addBooleanMetadata(Key2Boolean.newBuilder().setKey(key).setValue(value).build());
         }
+        buildMessageAndPrepareNewBuilder();
     }
 
     // TODO allow byte and integer properties with same name
@@ -131,6 +150,7 @@ public class HedwigJMSMessage implements Message {
         } else {
             builder.addIntegerMetadata(Key2Integer.newBuilder().setKey(key).setValue(value).build());
         }
+        buildMessageAndPrepareNewBuilder();
     }
 
     private void addLongMetadata(String key, Long value) {
@@ -147,6 +167,7 @@ public class HedwigJMSMessage implements Message {
         } else {
             builder.addLongMetadata(Key2Long.newBuilder().setKey(key).setValue(value).build());
         }
+        buildMessageAndPrepareNewBuilder();
     }
 
     private void addDoubleMetadata(String key, Double value) {
@@ -163,6 +184,7 @@ public class HedwigJMSMessage implements Message {
         } else {
             builder.addDoubleMetadata(Key2Double.newBuilder().setKey(key).setValue(value).build());
         }
+        buildMessageAndPrepareNewBuilder();
     }
 
     private void addFloatMetadata(String key, Float value) {
@@ -179,6 +201,7 @@ public class HedwigJMSMessage implements Message {
         } else {
             builder.addFloatMetadata(Key2Float.newBuilder().setKey(key).setValue(value).build());
         }
+        buildMessageAndPrepareNewBuilder();
     }
 
     @Override
