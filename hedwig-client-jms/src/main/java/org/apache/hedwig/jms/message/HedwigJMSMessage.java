@@ -11,6 +11,7 @@ import javax.jms.IllegalStateException;
 import javax.jms.JMSException;
 import javax.jms.Message;
 import javax.jms.MessageFormatException;
+import javax.jms.MessageNotWriteableException;
 
 import org.apache.derby.iapi.store.raw.xact.TransactionId;
 import org.apache.hedwig.jms.administered.HedwigDestination;
@@ -40,6 +41,9 @@ public class HedwigJMSMessage implements Message {
     ByteString subscriberId;
     HedwigSession hedwigSession;
 
+    // modifiable if new message or existing message and cleared body
+    boolean modifiableProperties = false;
+    boolean modifiableBody = false;
     boolean acknowledged = false;
     boolean alreadyDelivered = false;
     private static final ArrayList<String> JMS_HEADER_NAMES = new ArrayList<String>() {
@@ -62,6 +66,8 @@ public class HedwigJMSMessage implements Message {
         this.hedwigSession = hedwigSession;
         hedwigMessage = builder.buildPartial();
         builder = org.apache.hedwig.protocol.PubSubProtocol.Message.newBuilder(hedwigMessage);
+        modifiableProperties = true;
+        modifiableBody = true;
     }
 
     public HedwigJMSMessage(HedwigSession hedwigSession, ByteString subscriberId,
@@ -216,6 +222,7 @@ public class HedwigJMSMessage implements Message {
     @Override
     public void clearBody() throws JMSException {
         builder.clearBody();
+        modifiableBody = true;
     }
 
     @Override
@@ -226,6 +233,21 @@ public class HedwigJMSMessage implements Message {
         builder.clearIntegerMetadata();
         builder.clearLongMetadata();
         builder.clearStringMetadata();
+        modifiableProperties = true;
+    }
+
+    private void checkPropertiesWriteable() throws MessageNotWriteableException {
+        if (!modifiableProperties) {
+            throw new MessageNotWriteableException(
+                    "Properties not writeable. You must clear all properties for enabling modifications");
+        }
+    }
+
+    protected void checkBodyWriteable() throws MessageNotWriteableException {
+        if (!modifiableBody) {
+            throw new MessageNotWriteableException(
+                    "Body not writeable. You must clear the body for enabling modifications");
+        }
     }
 
     @Override
@@ -482,26 +504,31 @@ public class HedwigJMSMessage implements Message {
 
     @Override
     public void setBooleanProperty(String key, boolean value) throws JMSException {
+        checkPropertiesWriteable();
         addBooleanMetadata(key, value);
     }
 
     @Override
     public void setByteProperty(String key, byte value) throws JMSException {
+        checkPropertiesWriteable();
         addIntegerMetadata(key, (int) value);
     }
 
     @Override
     public void setDoubleProperty(String key, double value) throws JMSException {
+        checkPropertiesWriteable();
         addDoubleMetadata(key, value);
     }
 
     @Override
     public void setFloatProperty(String key, float value) throws JMSException {
+        checkPropertiesWriteable();
         addFloatMetadata(key, value);
     }
 
     @Override
     public void setIntProperty(String key, int value) throws JMSException {
+        checkPropertiesWriteable();
         addIntegerMetadata(key, value);
     }
 
@@ -565,17 +592,20 @@ public class HedwigJMSMessage implements Message {
 
     @Override
     public void setLongProperty(String key, long value) throws JMSException {
+        checkPropertiesWriteable();
         addLongMetadata(key, value);
     }
 
     @Override
     public void setShortProperty(String name, short value) throws JMSException {
+        checkPropertiesWriteable();
         addIntegerMetadata(name, (int) value);
 
     }
 
     @Override
     public void setObjectProperty(String key, Object value) throws JMSException {
+        checkPropertiesWriteable();
         if (value instanceof Boolean) {
             addBooleanMetadata(key, (Boolean) value);
         } else if (value instanceof Byte || value instanceof Short || value instanceof Integer) {
@@ -595,6 +625,7 @@ public class HedwigJMSMessage implements Message {
 
     @Override
     public void setStringProperty(String key, String value) throws JMSException {
+        checkPropertiesWriteable();
         addStringMetadata(key, value);
     }
 

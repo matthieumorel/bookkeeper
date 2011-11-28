@@ -26,6 +26,7 @@ public class HedwigJMSTextMessage extends HedwigJMSMessage implements TextMessag
 
     @Override
     public void setText(String text) throws JMSException {
+        checkBodyWriteable();
         builder.setBody(ByteString.copyFromUtf8(text));
         buildMessageAndPrepareNewBuilder();
     }
