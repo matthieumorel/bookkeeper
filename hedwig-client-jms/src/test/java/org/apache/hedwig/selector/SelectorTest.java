@@ -404,7 +404,7 @@ public class SelectorTest extends TestCase {
     }
 
     protected Message createMessage(String subject) throws JMSException {
-        HedwigJMSMessage message = new HedwigJMSMessage(null);
+        HedwigJMSMessage message = new HedwigJMSTextMessage(null);
         message.setJMSDestination(new HedwigTopic(subject));
         return message;
     }

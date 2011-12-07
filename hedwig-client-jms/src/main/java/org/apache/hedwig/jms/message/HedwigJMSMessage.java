@@ -16,6 +16,7 @@ import javax.jms.MessageNotWriteableException;
 import org.apache.derby.iapi.store.raw.xact.TransactionId;
 import org.apache.hedwig.jms.administered.HedwigDestination;
 import org.apache.hedwig.jms.administered.HedwigSession;
+import org.apache.hedwig.protocol.PubSubProtocol.JmsBodyType;
 import org.apache.hedwig.protocol.PubSubProtocol.Key2Boolean;
 import org.apache.hedwig.protocol.PubSubProtocol.Key2Double;
 import org.apache.hedwig.protocol.PubSubProtocol.Key2Float;
@@ -34,16 +35,18 @@ import com.google.protobuf.ByteString;
 // TODO add checks on property keys
 // TODO add checks on property values
 // TODO implement all properties, probably using an extra map field in the message structure (for ttl etc...)
-public class HedwigJMSMessage implements Message {
+public abstract class HedwigJMSMessage implements Message {
 
     protected Builder builder;
     protected org.apache.hedwig.protocol.PubSubProtocol.Message hedwigMessage;
     ByteString subscriberId;
     HedwigSession hedwigSession;
 
+    // TODO use a parameter
+    public static final int MAX_KRYO_BUFFER_CAPACITY = 16000;
     // modifiable if new message or existing message and cleared body
     boolean modifiableProperties = false;
-    boolean modifiableBody = false;
+    protected boolean modifiableBody = false;
     boolean acknowledged = false;
     boolean alreadyDelivered = false;
     private static final ArrayList<String> JMS_HEADER_NAMES = new ArrayList<String>() {
@@ -668,4 +671,19 @@ public class HedwigJMSMessage implements Message {
         return null;
     }
 
+    public abstract void doPrepareForSend() throws JMSException;
+
+    public abstract JmsBodyType getBodyType();
+
+    public final void prepareForSend() throws JMSException {
+        setReadonly();
+        doPrepareForSend();
+        buildMessageAndPrepareNewBuilder();
+        builder.setJmsBodyType(getBodyType());
+    }
+
+    private void setReadonly() {
+        modifiableBody = false;
+        modifiableProperties = false;
+    }
 }

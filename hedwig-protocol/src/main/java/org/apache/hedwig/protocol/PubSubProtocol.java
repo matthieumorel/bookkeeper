@@ -73,6 +73,79 @@ public final class PubSubProtocol {
     // @@protoc_insertion_point(enum_scope:Hedwig.ProtocolVersion)
   }
   
+  public enum JmsBodyType
+      implements com.google.protobuf.ProtocolMessageEnum {
+    STREAM(0, 0),
+    MAP(1, 1),
+    TEXT(2, 2),
+    OBJECT(3, 3),
+    BYTES(4, 4),
+    ;
+    
+    
+    public final int getNumber() { return value; }
+    
+    public static JmsBodyType valueOf(int value) {
+      switch (value) {
+        case 0: return STREAM;
+        case 1: return MAP;
+        case 2: return TEXT;
+        case 3: return OBJECT;
+        case 4: return BYTES;
+        default: return null;
+      }
+    }
+    
+    public static com.google.protobuf.Internal.EnumLiteMap<JmsBodyType>
+        internalGetValueMap() {
+      return internalValueMap;
+    }
+    private static com.google.protobuf.Internal.EnumLiteMap<JmsBodyType>
+        internalValueMap =
+          new com.google.protobuf.Internal.EnumLiteMap<JmsBodyType>() {
+            public JmsBodyType findValueByNumber(int number) {
+              return JmsBodyType.valueOf(number)
+    ;        }
+          };
+    
+    public final com.google.protobuf.Descriptors.EnumValueDescriptor
+        getValueDescriptor() {
+      return getDescriptor().getValues().get(index);
+    }
+    public final com.google.protobuf.Descriptors.EnumDescriptor
+        getDescriptorForType() {
+      return getDescriptor();
+    }
+    public static final com.google.protobuf.Descriptors.EnumDescriptor
+        getDescriptor() {
+      return org.apache.hedwig.protocol.PubSubProtocol.getDescriptor().getEnumTypes().get(1);
+    }
+    
+    private static final JmsBodyType[] VALUES = {
+      STREAM, MAP, TEXT, OBJECT, BYTES, 
+    };
+    public static JmsBodyType valueOf(
+        com.google.protobuf.Descriptors.EnumValueDescriptor desc) {
+      if (desc.getType() != getDescriptor()) {
+        throw new java.lang.IllegalArgumentException(
+          "EnumValueDescriptor is not for this type.");
+      }
+      return VALUES[desc.getIndex()];
+    }
+    private final int index;
+    private final int value;
+    private JmsBodyType(int index, int value) {
+      this.index = index;
+      this.value = value;
+    }
+    
+    static {
+      org.apache.hedwig.protocol.PubSubProtocol.getDescriptor();
+    }
+    
+    // @@protoc_insertion_point(enum_scope:Hedwig.JmsBodyType)
+  }
+  
   public enum OperationType
       implements com.google.protobuf.ProtocolMessageEnum {
     PUBLISH(0, 0),
@@ -120,7 +193,7 @@ public final class PubSubProtocol {
     }
     public static final com.google.protobuf.Descriptors.EnumDescriptor
         getDescriptor() {
-      return org.apache.hedwig.protocol.PubSubProtocol.getDescriptor().getEnumTypes().get(1);
+      return org.apache.hedwig.protocol.PubSubProtocol.getDescriptor().getEnumTypes().get(2);
     }
     
     private static final OperationType[] VALUES = {
@@ -207,7 +280,7 @@ public final class PubSubProtocol {
     }
     public static final com.google.protobuf.Descriptors.EnumDescriptor
         getDescriptor() {
-      return org.apache.hedwig.protocol.PubSubProtocol.getDescriptor().getEnumTypes().get(2);
+      return org.apache.hedwig.protocol.PubSubProtocol.getDescriptor().getEnumTypes().get(3);
     }
     
     private static final StatusCode[] VALUES = {
@@ -355,8 +428,16 @@ public final class PubSubProtocol {
       return stringMetadata_.get(index);
     }
     
+    // optional .Hedwig.JmsBodyType jmsBodyType = 10;
+    public static final int JMSBODYTYPE_FIELD_NUMBER = 10;
+    private boolean hasJmsBodyType;
+    private org.apache.hedwig.protocol.PubSubProtocol.JmsBodyType jmsBodyType_;
+    public boolean hasJmsBodyType() { return hasJmsBodyType; }
+    public org.apache.hedwig.protocol.PubSubProtocol.JmsBodyType getJmsBodyType() { return jmsBodyType_; }
+    
     private void initFields() {
       msgId_ = org.apache.hedwig.protocol.PubSubProtocol.MessageSeqId.getDefaultInstance();
+      jmsBodyType_ = org.apache.hedwig.protocol.PubSubProtocol.JmsBodyType.STREAM;
     }
     public final boolean isInitialized() {
       if (!hasBody) return false;
@@ -414,6 +495,9 @@ public final class PubSubProtocol {
       for (org.apache.hedwig.protocol.PubSubProtocol.Key2String element : getStringMetadataList()) {
         output.writeMessage(9, element);
       }
+      if (hasJmsBodyType()) {
+        output.writeEnum(10, getJmsBodyType().getNumber());
+      }
       getUnknownFields().writeTo(output);
     }
     
@@ -458,6 +542,10 @@ public final class PubSubProtocol {
       for (org.apache.hedwig.protocol.PubSubProtocol.Key2String element : getStringMetadataList()) {
         size += com.google.protobuf.CodedOutputStream
           .computeMessageSize(9, element);
+      }
+      if (hasJmsBodyType()) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeEnumSize(10, getJmsBodyType().getNumber());
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -686,6 +774,9 @@ public final class PubSubProtocol {
           }
           result.stringMetadata_.addAll(other.stringMetadata_);
         }
+        if (other.hasJmsBodyType()) {
+          setJmsBodyType(other.getJmsBodyType());
+        }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
       }
@@ -762,6 +853,16 @@ public final class PubSubProtocol {
               org.apache.hedwig.protocol.PubSubProtocol.Key2String.Builder subBuilder = org.apache.hedwig.protocol.PubSubProtocol.Key2String.newBuilder();
               input.readMessage(subBuilder, extensionRegistry);
               addStringMetadata(subBuilder.buildPartial());
+              break;
+            }
+            case 80: {
+              int rawValue = input.readEnum();
+              org.apache.hedwig.protocol.PubSubProtocol.JmsBodyType value = org.apache.hedwig.protocol.PubSubProtocol.JmsBodyType.valueOf(rawValue);
+              if (value == null) {
+                unknownFields.mergeVarintField(10, rawValue);
+              } else {
+                setJmsBodyType(value);
+              }
               break;
             }
           }
@@ -1151,6 +1252,27 @@ public final class PubSubProtocol {
       }
       public Builder clearStringMetadata() {
         result.stringMetadata_ = java.util.Collections.emptyList();
+        return this;
+      }
+      
+      // optional .Hedwig.JmsBodyType jmsBodyType = 10;
+      public boolean hasJmsBodyType() {
+        return result.hasJmsBodyType();
+      }
+      public org.apache.hedwig.protocol.PubSubProtocol.JmsBodyType getJmsBodyType() {
+        return result.getJmsBodyType();
+      }
+      public Builder setJmsBodyType(org.apache.hedwig.protocol.PubSubProtocol.JmsBodyType value) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        result.hasJmsBodyType = true;
+        result.jmsBodyType_ = value;
+        return this;
+      }
+      public Builder clearJmsBodyType() {
+        result.hasJmsBodyType = false;
+        result.jmsBodyType_ = org.apache.hedwig.protocol.PubSubProtocol.JmsBodyType.STREAM;
         return this;
       }
       
@@ -8444,7 +8566,7 @@ public final class PubSubProtocol {
   static {
     java.lang.String[] descriptorData = {
       "\n&src/main/protobuf/PubSubProtocol.proto" +
-      "\022\006Hedwig\"\325\002\n\007Message\022\014\n\004body\030\001 \002(\014\022\021\n\tsr" +
+      "\022\006Hedwig\"\377\002\n\007Message\022\014\n\004body\030\001 \002(\014\022\021\n\tsr" +
       "cRegion\030\002 \001(\014\022#\n\005msgId\030\003 \001(\0132\024.Hedwig.Me" +
       "ssageSeqId\022,\n\017booleanMetadata\030\004 \003(\0132\023.He" +
       "dwig.Key2Boolean\022,\n\017integerMetadata\030\005 \003(" +
@@ -8452,64 +8574,66 @@ public final class PubSubProtocol {
       " \003(\0132\020.Hedwig.Key2Long\022(\n\rfloatMetadata\030" +
       "\007 \003(\0132\021.Hedwig.Key2Float\022*\n\016doubleMetada" +
       "ta\030\010 \003(\0132\022.Hedwig.Key2Double\022*\n\016stringMe" +
-      "tadata\030\t \003(\0132\022.Hedwig.Key2String\")\n\013Key2",
-      "Boolean\022\013\n\003key\030\001 \002(\t\022\r\n\005value\030\002 \002(\010\")\n\013K" +
-      "ey2Integer\022\013\n\003key\030\001 \002(\t\022\r\n\005value\030\002 \002(\021\"&" +
-      "\n\010Key2Long\022\013\n\003key\030\001 \002(\t\022\r\n\005value\030\002 \002(\022\"\'" +
-      "\n\tKey2Float\022\013\n\003key\030\001 \002(\t\022\r\n\005value\030\002 \002(\002\"" +
-      "(\n\nKey2Double\022\013\n\003key\030\001 \002(\t\022\r\n\005value\030\002 \002(" +
-      "\001\"(\n\nKey2String\022\013\n\003key\030\001 \002(\t\022\r\n\005value\030\002 " +
-      "\002(\t\"4\n\023RegionSpecificSeqId\022\016\n\006region\030\001 \002" +
-      "(\014\022\r\n\005seqId\030\002 \002(\004\"]\n\014MessageSeqId\022\026\n\016loc" +
-      "alComponent\030\001 \001(\004\0225\n\020remoteComponents\030\002 " +
-      "\003(\0132\033.Hedwig.RegionSpecificSeqId\"\361\003\n\rPub",
-      "SubRequest\0220\n\017protocolVersion\030\001 \002(\0162\027.He" +
-      "dwig.ProtocolVersion\022#\n\004type\030\002 \002(\0162\025.Hed" +
-      "wig.OperationType\022\024\n\014triedServers\030\003 \003(\014\022" +
-      "\r\n\005txnId\030\004 \002(\004\022\023\n\013shouldClaim\030\005 \001(\010\022\r\n\005t" +
-      "opic\030\006 \002(\014\022.\n\016publishRequest\0304 \001(\0132\026.Hed" +
-      "wig.PublishRequest\0222\n\020subscribeRequest\0305" +
-      " \001(\0132\030.Hedwig.SubscribeRequest\022.\n\016consum" +
-      "eRequest\0306 \001(\0132\026.Hedwig.ConsumeRequest\0226" +
-      "\n\022unsubscribeRequest\0307 \001(\0132\032.Hedwig.Unsu" +
-      "bscribeRequest\0228\n\023stopDeliveryRequest\0308 ",
-      "\001(\0132\033.Hedwig.StopDeliveryRequest\022:\n\024star" +
-      "tDeliveryRequest\0309 \001(\0132\034.Hedwig.StartDel" +
-      "iveryRequest\".\n\016PublishRequest\022\034\n\003msg\030\002 " +
-      "\002(\0132\017.Hedwig.Message\"\327\001\n\020SubscribeReques" +
-      "t\022\024\n\014subscriberId\030\002 \002(\014\022Q\n\016createOrAttac" +
-      "h\030\003 \001(\0162\'.Hedwig.SubscribeRequest.Create" +
-      "OrAttach:\020CREATE_OR_ATTACH\022\032\n\013synchronou" +
-      "s\030\004 \001(\010:\005false\">\n\016CreateOrAttach\022\n\n\006CREA" +
-      "TE\020\000\022\n\n\006ATTACH\020\001\022\024\n\020CREATE_OR_ATTACH\020\002\"K" +
-      "\n\016ConsumeRequest\022\024\n\014subscriberId\030\002 \002(\014\022#",
-      "\n\005msgId\030\003 \002(\0132\024.Hedwig.MessageSeqId\"*\n\022U" +
-      "nsubscribeRequest\022\024\n\014subscriberId\030\002 \002(\014\"" +
-      "+\n\023StopDeliveryRequest\022\024\n\014subscriberId\030\002" +
-      " \002(\014\",\n\024StartDeliveryRequest\022\024\n\014subscrib" +
-      "erId\030\002 \002(\014\"\323\001\n\016PubSubResponse\0220\n\017protoco" +
-      "lVersion\030\001 \002(\0162\027.Hedwig.ProtocolVersion\022" +
-      "&\n\nstatusCode\030\002 \002(\0162\022.Hedwig.StatusCode\022" +
-      "\r\n\005txnId\030\003 \002(\004\022\021\n\tstatusMsg\030\004 \001(\t\022 \n\007mes" +
-      "sage\030\005 \001(\0132\017.Hedwig.Message\022\r\n\005topic\030\006 \001" +
-      "(\014\022\024\n\014subscriberId\030\007 \001(\014\"8\n\021Subscription",
-      "State\022#\n\005msgId\030\001 \002(\0132\024.Hedwig.MessageSeq" +
-      "Id\"O\n\013LedgerRange\022\020\n\010ledgerId\030\001 \002(\004\022.\n\020e" +
-      "ndSeqIdIncluded\030\002 \001(\0132\024.Hedwig.MessageSe" +
-      "qId\"3\n\014LedgerRanges\022#\n\006ranges\030\001 \003(\0132\023.He" +
-      "dwig.LedgerRange*\"\n\017ProtocolVersion\022\017\n\013V" +
-      "ERSION_ONE\020\001*p\n\rOperationType\022\013\n\007PUBLISH" +
-      "\020\000\022\r\n\tSUBSCRIBE\020\001\022\013\n\007CONSUME\020\002\022\017\n\013UNSUBS" +
-      "CRIBE\020\003\022\022\n\016START_DELIVERY\020\004\022\021\n\rSTOP_DELI" +
-      "VERY\020\005*\236\002\n\nStatusCode\022\013\n\007SUCCESS\020\000\022\026\n\021MA" +
-      "LFORMED_REQUEST\020\221\003\022\022\n\rNO_SUCH_TOPIC\020\222\003\022\036",
-      "\n\031CLIENT_ALREADY_SUBSCRIBED\020\223\003\022\032\n\025CLIENT" +
-      "_NOT_SUBSCRIBED\020\224\003\022\026\n\021COULD_NOT_CONNECT\020" +
-      "\225\003\022\017\n\nTOPIC_BUSY\020\226\003\022\036\n\031NOT_RESPONSIBLE_F" +
-      "OR_TOPIC\020\365\003\022\021\n\014SERVICE_DOWN\020\366\003\022\024\n\017UNCERT" +
-      "AIN_STATE\020\367\003\022\031\n\024UNEXPECTED_CONDITION\020\330\004\022" +
-      "\016\n\tCOMPOSITE\020\274\005B\036\n\032org.apache.hedwig.pro" +
-      "tocolH\001"
+      "tadata\030\t \003(\0132\022.Hedwig.Key2String\022(\n\013jmsB",
+      "odyType\030\n \001(\0162\023.Hedwig.JmsBodyType\")\n\013Ke" +
+      "y2Boolean\022\013\n\003key\030\001 \002(\t\022\r\n\005value\030\002 \002(\010\")\n" +
+      "\013Key2Integer\022\013\n\003key\030\001 \002(\t\022\r\n\005value\030\002 \002(\021" +
+      "\"&\n\010Key2Long\022\013\n\003key\030\001 \002(\t\022\r\n\005value\030\002 \002(\022" +
+      "\"\'\n\tKey2Float\022\013\n\003key\030\001 \002(\t\022\r\n\005value\030\002 \002(" +
+      "\002\"(\n\nKey2Double\022\013\n\003key\030\001 \002(\t\022\r\n\005value\030\002 " +
+      "\002(\001\"(\n\nKey2String\022\013\n\003key\030\001 \002(\t\022\r\n\005value\030" +
+      "\002 \002(\t\"4\n\023RegionSpecificSeqId\022\016\n\006region\030\001" +
+      " \002(\014\022\r\n\005seqId\030\002 \002(\004\"]\n\014MessageSeqId\022\026\n\016l" +
+      "ocalComponent\030\001 \001(\004\0225\n\020remoteComponents\030",
+      "\002 \003(\0132\033.Hedwig.RegionSpecificSeqId\"\361\003\n\rP" +
+      "ubSubRequest\0220\n\017protocolVersion\030\001 \002(\0162\027." +
+      "Hedwig.ProtocolVersion\022#\n\004type\030\002 \002(\0162\025.H" +
+      "edwig.OperationType\022\024\n\014triedServers\030\003 \003(" +
+      "\014\022\r\n\005txnId\030\004 \002(\004\022\023\n\013shouldClaim\030\005 \001(\010\022\r\n" +
+      "\005topic\030\006 \002(\014\022.\n\016publishRequest\0304 \001(\0132\026.H" +
+      "edwig.PublishRequest\0222\n\020subscribeRequest" +
+      "\0305 \001(\0132\030.Hedwig.SubscribeRequest\022.\n\016cons" +
+      "umeRequest\0306 \001(\0132\026.Hedwig.ConsumeRequest" +
+      "\0226\n\022unsubscribeRequest\0307 \001(\0132\032.Hedwig.Un",
+      "subscribeRequest\0228\n\023stopDeliveryRequest\030" +
+      "8 \001(\0132\033.Hedwig.StopDeliveryRequest\022:\n\024st" +
+      "artDeliveryRequest\0309 \001(\0132\034.Hedwig.StartD" +
+      "eliveryRequest\".\n\016PublishRequest\022\034\n\003msg\030" +
+      "\002 \002(\0132\017.Hedwig.Message\"\327\001\n\020SubscribeRequ" +
+      "est\022\024\n\014subscriberId\030\002 \002(\014\022Q\n\016createOrAtt" +
+      "ach\030\003 \001(\0162\'.Hedwig.SubscribeRequest.Crea" +
+      "teOrAttach:\020CREATE_OR_ATTACH\022\032\n\013synchron" +
+      "ous\030\004 \001(\010:\005false\">\n\016CreateOrAttach\022\n\n\006CR" +
+      "EATE\020\000\022\n\n\006ATTACH\020\001\022\024\n\020CREATE_OR_ATTACH\020\002",
+      "\"K\n\016ConsumeRequest\022\024\n\014subscriberId\030\002 \002(\014" +
+      "\022#\n\005msgId\030\003 \002(\0132\024.Hedwig.MessageSeqId\"*\n" +
+      "\022UnsubscribeRequest\022\024\n\014subscriberId\030\002 \002(" +
+      "\014\"+\n\023StopDeliveryRequest\022\024\n\014subscriberId" +
+      "\030\002 \002(\014\",\n\024StartDeliveryRequest\022\024\n\014subscr" +
+      "iberId\030\002 \002(\014\"\323\001\n\016PubSubResponse\0220\n\017proto" +
+      "colVersion\030\001 \002(\0162\027.Hedwig.ProtocolVersio" +
+      "n\022&\n\nstatusCode\030\002 \002(\0162\022.Hedwig.StatusCod" +
+      "e\022\r\n\005txnId\030\003 \002(\004\022\021\n\tstatusMsg\030\004 \001(\t\022 \n\007m" +
+      "essage\030\005 \001(\0132\017.Hedwig.Message\022\r\n\005topic\030\006",
+      " \001(\014\022\024\n\014subscriberId\030\007 \001(\014\"8\n\021Subscripti" +
+      "onState\022#\n\005msgId\030\001 \002(\0132\024.Hedwig.MessageS" +
+      "eqId\"O\n\013LedgerRange\022\020\n\010ledgerId\030\001 \002(\004\022.\n" +
+      "\020endSeqIdIncluded\030\002 \001(\0132\024.Hedwig.Message" +
+      "SeqId\"3\n\014LedgerRanges\022#\n\006ranges\030\001 \003(\0132\023." +
+      "Hedwig.LedgerRange*\"\n\017ProtocolVersion\022\017\n" +
+      "\013VERSION_ONE\020\001*C\n\013JmsBodyType\022\n\n\006STREAM\020" +
+      "\000\022\007\n\003MAP\020\001\022\010\n\004TEXT\020\002\022\n\n\006OBJECT\020\003\022\t\n\005BYTE" +
+      "S\020\004*p\n\rOperationType\022\013\n\007PUBLISH\020\000\022\r\n\tSUB" +
+      "SCRIBE\020\001\022\013\n\007CONSUME\020\002\022\017\n\013UNSUBSCRIBE\020\003\022\022",
+      "\n\016START_DELIVERY\020\004\022\021\n\rSTOP_DELIVERY\020\005*\236\002" +
+      "\n\nStatusCode\022\013\n\007SUCCESS\020\000\022\026\n\021MALFORMED_R" +
+      "EQUEST\020\221\003\022\022\n\rNO_SUCH_TOPIC\020\222\003\022\036\n\031CLIENT_" +
+      "ALREADY_SUBSCRIBED\020\223\003\022\032\n\025CLIENT_NOT_SUBS" +
+      "CRIBED\020\224\003\022\026\n\021COULD_NOT_CONNECT\020\225\003\022\017\n\nTOP" +
+      "IC_BUSY\020\226\003\022\036\n\031NOT_RESPONSIBLE_FOR_TOPIC\020" +
+      "\365\003\022\021\n\014SERVICE_DOWN\020\366\003\022\024\n\017UNCERTAIN_STATE" +
+      "\020\367\003\022\031\n\024UNEXPECTED_CONDITION\020\330\004\022\016\n\tCOMPOS" +
+      "ITE\020\274\005B\036\n\032org.apache.hedwig.protocolH\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -8521,7 +8645,7 @@ public final class PubSubProtocol {
           internal_static_Hedwig_Message_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_Hedwig_Message_descriptor,
-              new java.lang.String[] { "Body", "SrcRegion", "MsgId", "BooleanMetadata", "IntegerMetadata", "LongMetadata", "FloatMetadata", "DoubleMetadata", "StringMetadata", },
+              new java.lang.String[] { "Body", "SrcRegion", "MsgId", "BooleanMetadata", "IntegerMetadata", "LongMetadata", "FloatMetadata", "DoubleMetadata", "StringMetadata", "JmsBodyType", },
               org.apache.hedwig.protocol.PubSubProtocol.Message.class,
               org.apache.hedwig.protocol.PubSubProtocol.Message.Builder.class);
           internal_static_Hedwig_Key2Boolean_descriptor =

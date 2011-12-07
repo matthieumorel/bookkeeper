@@ -4,6 +4,7 @@ import javax.jms.JMSException;
 import javax.jms.TextMessage;
 
 import org.apache.hedwig.jms.administered.HedwigSession;
+import org.apache.hedwig.protocol.PubSubProtocol.JmsBodyType;
 import org.apache.hedwig.protocol.PubSubProtocol.Message;
 
 import com.google.protobuf.ByteString;
@@ -28,7 +29,16 @@ public class HedwigJMSTextMessage extends HedwigJMSMessage implements TextMessag
     public void setText(String text) throws JMSException {
         checkBodyWriteable();
         builder.setBody(ByteString.copyFromUtf8(text));
-        buildMessageAndPrepareNewBuilder();
+    }
+
+    @Override
+    public void doPrepareForSend() {
+
+    }
+
+    @Override
+    public JmsBodyType getBodyType() {
+        return JmsBodyType.TEXT;
     }
 
 }

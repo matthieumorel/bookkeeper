@@ -36,6 +36,15 @@ message Message {
     repeated Key2Float floatMetadata = 7;
     repeated Key2Double doubleMetadata = 8;
     repeated Key2String stringMetadata = 9;
+    optional JmsBodyType jmsBodyType = 10;
+}
+
+enum JmsBodyType {
+	STREAM = 0;
+	MAP = 1;
+	TEXT = 2;
+	OBJECT = 3;
+	BYTES = 4;
 }
 
 message Key2Boolean {
