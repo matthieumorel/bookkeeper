@@ -11,16 +11,16 @@ import org.apache.commons.lang.NotImplementedException;
 
 public class HedwigTopicConnection extends HedwigConnection implements TopicConnection {
 
-	@Override
-	public ConnectionConsumer createConnectionConsumer(Topic topic, String messageSelector,
-	        ServerSessionPool sessionPool, int maxMessages) throws JMSException {
-		throw new NotImplementedException(
-		        "Hedwig currently does not support the JMS optional operation 'createConnectionConsumer'");
-	}
+    @Override
+    public ConnectionConsumer createConnectionConsumer(Topic topic, String messageSelector,
+            ServerSessionPool sessionPool, int maxMessages) throws JMSException {
+        throw new NotImplementedException(
+                "Hedwig currently does not support the JMS optional operation 'createConnectionConsumer'");
+    }
 
-	@Override
-	public TopicSession createTopicSession(boolean transacted, int acknowledgementMode) throws JMSException {
-		return new HedwigTopicSession(this, acknowledgementMode, hedwigClientConfig);
-	}
+    @Override
+    public TopicSession createTopicSession(boolean transacted, int acknowledgementMode) throws JMSException {
+        return new HedwigTopicSession(this, acknowledgementMode, hedwigClientConfig);
+    }
 
 }

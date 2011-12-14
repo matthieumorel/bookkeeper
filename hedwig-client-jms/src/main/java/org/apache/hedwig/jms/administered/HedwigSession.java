@@ -27,9 +27,9 @@ import javax.jms.TextMessage;
 import javax.jms.Topic;
 import javax.jms.TopicSubscriber;
 
+import org.apache.hedwig.client.HedwigClient;
 import org.apache.hedwig.client.conf.ClientConfiguration;
 import org.apache.hedwig.client.exceptions.InvalidSubscriberIdException;
-import org.apache.hedwig.client.netty.HedwigClient;
 import org.apache.hedwig.exceptions.PubSubException.ClientAlreadySubscribedException;
 import org.apache.hedwig.exceptions.PubSubException.ClientNotSubscribedException;
 import org.apache.hedwig.exceptions.PubSubException.CouldNotConnectException;
@@ -190,7 +190,7 @@ public class HedwigSession implements Session {
             }
             // disconnect hedwig clients
             for (HedwigMessageConsumer consumer : consumers.values()) {
-                consumer.getHedwigClient().stop();
+                consumer.getHedwigClient().close();
             }
             sessionMessageQueue.clearPendingMessages();
             isClosed = true;

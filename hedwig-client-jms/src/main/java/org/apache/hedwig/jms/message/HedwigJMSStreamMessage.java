@@ -35,12 +35,10 @@ public class HedwigJMSStreamMessage extends HedwigJMSMessage implements StreamMe
 
     public HedwigJMSStreamMessage(HedwigSession hedwigSession) {
         super(hedwigSession);
-        // TODO Auto-generated constructor stub
     }
 
     public HedwigJMSStreamMessage(HedwigSession hedwigSession, ByteString subscriberId, Message hedwigMessage) {
         super(hedwigSession, subscriberId, hedwigMessage);
-        // TODO Auto-generated constructor stub
     }
 
     private void checkReadOnlyMode() throws MessageNotReadableException {

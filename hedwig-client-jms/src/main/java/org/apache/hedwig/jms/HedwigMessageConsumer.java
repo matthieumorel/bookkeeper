@@ -10,10 +10,10 @@ import javax.jms.Message;
 import javax.jms.MessageConsumer;
 import javax.jms.MessageListener;
 
+import org.apache.hedwig.client.HedwigClient;
 import org.apache.hedwig.client.api.MessageHandler;
 import org.apache.hedwig.client.conf.ClientConfiguration;
 import org.apache.hedwig.client.exceptions.InvalidSubscriberIdException;
-import org.apache.hedwig.client.netty.HedwigClient;
 import org.apache.hedwig.exceptions.PubSubException.ClientAlreadySubscribedException;
 import org.apache.hedwig.exceptions.PubSubException.ClientNotSubscribedException;
 import org.apache.hedwig.exceptions.PubSubException.CouldNotConnectException;
@@ -117,6 +117,11 @@ public class HedwigMessageConsumer implements MessageConsumer, MessageHandler {
         return doReceive(-1);
     }
 
+    /**
+     * NOTE: Since filtering is performed by the client, clients receive all
+     * messages. The timeout is reset if an incoming message fails a filter, so
+     * that the timeout only applies to messages that can actually be processed.
+     */
     private Message doReceive(long timeout) throws JMSException {
         checkSessionNotClosed();
         try {
@@ -174,7 +179,7 @@ public class HedwigMessageConsumer implements MessageConsumer, MessageHandler {
     }
 
     @Override
-    public synchronized void consume(ByteString topic, ByteString subscriberId,
+    public synchronized void deliver(ByteString topic, ByteString subscriberId,
             org.apache.hedwig.protocol.PubSubProtocol.Message msg, Callback<Void> callback, Object context) {
         if (this.topicName.equals(topic) && this.subscriberId.equals(subscriberId)) {
             // serialize access to messages through the session

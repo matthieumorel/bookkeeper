@@ -134,7 +134,9 @@ public class TestUtils {
             File f = new File(DEFAULT_STORAGE_DIR + "/bookie_test_" + i);
             f.delete();
             f.mkdir();
-            BookieServer server = new BookieServer(INITIAL_BOOKIE_PORT + i, "localhost:" + ZK_PORT, f, new File[] { f });
+            BookieServer server = new BookieServer(new org.apache.bookkeeper.conf.ServerConfiguration()
+                    .setBookiePort(INITIAL_BOOKIE_PORT + i).setZkServers("localhost:" + ZK_PORT)
+                    .setJournalDirName(f.getAbsolutePath()).setLedgerDirNames(new String[] { f.getAbsolutePath() }));
             server.start();
             bs.add(server);
         }

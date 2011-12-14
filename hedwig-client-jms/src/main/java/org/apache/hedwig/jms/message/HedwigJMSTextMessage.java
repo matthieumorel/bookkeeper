@@ -17,7 +17,6 @@ public class HedwigJMSTextMessage extends HedwigJMSMessage implements TextMessag
 
     public HedwigJMSTextMessage(HedwigSession hedwigSession, ByteString subscriberId, Message hedwigMessage) {
         super(hedwigSession, subscriberId, hedwigMessage);
-        // TODO Auto-generated constructor stub
     }
 
     @Override
@@ -33,7 +32,7 @@ public class HedwigJMSTextMessage extends HedwigJMSMessage implements TextMessag
 
     @Override
     public void doPrepareForSend() {
-
+        // nothing to do
     }
 
     @Override

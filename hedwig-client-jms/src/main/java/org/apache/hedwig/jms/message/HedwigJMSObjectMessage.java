@@ -24,12 +24,10 @@ public class HedwigJMSObjectMessage extends HedwigJMSMessage implements ObjectMe
 
     public HedwigJMSObjectMessage(HedwigSession hedwigSession) {
         super(hedwigSession);
-        // TODO Auto-generated constructor stub
     }
 
     public HedwigJMSObjectMessage(HedwigSession hedwigSession, ByteString subscriberId, Message hedwigMessage) {
         super(hedwigSession, subscriberId, hedwigMessage);
-        // TODO Auto-generated constructor stub
     }
 
     @Override
