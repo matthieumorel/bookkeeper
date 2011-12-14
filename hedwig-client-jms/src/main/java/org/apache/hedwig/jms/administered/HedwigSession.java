@@ -258,7 +258,7 @@ public class HedwigSession implements Session {
         ByteString topicName = ByteString.copyFromUtf8(((Topic) destination).getTopicName());
 
         HedwigMessageConsumer consumer = new HedwigMessageConsumer(this, topicName, getHedwigConnection()
-                .getHedwigClientConfig());
+                .getHedwigClientConfig(), messageSelector);
         sessionMessageQueue.addConsumer(consumer.getSubscriberId());
         return consumer;
     }

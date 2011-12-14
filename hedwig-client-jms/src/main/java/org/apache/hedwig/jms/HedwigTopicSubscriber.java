@@ -12,20 +12,20 @@ import com.google.protobuf.ByteString;
 
 public class HedwigTopicSubscriber extends HedwigMessageConsumer implements TopicSubscriber {
 
-	public HedwigTopicSubscriber(HedwigSession hedwigSession, ByteString topicName,
-	        ClientConfiguration hedwigClientConfig) {
-		super(hedwigSession, topicName, hedwigClientConfig);
-		// TODO Auto-generated constructor stub
-	}
+    public HedwigTopicSubscriber(HedwigSession hedwigSession, ByteString topicName,
+            ClientConfiguration hedwigClientConfig, String selector) {
+        super(hedwigSession, topicName, hedwigClientConfig, selector);
+        // TODO Auto-generated constructor stub
+    }
 
-	@Override
-	public Topic getTopic() throws JMSException {
-		return new HedwigTopic(topicName.toStringUtf8());
-	}
+    @Override
+    public Topic getTopic() throws JMSException {
+        return new HedwigTopic(topicName.toStringUtf8());
+    }
 
-	@Override
-	public boolean getNoLocal() throws JMSException {
-		return false;
-	}
+    @Override
+    public boolean getNoLocal() throws JMSException {
+        return false;
+    }
 
 }

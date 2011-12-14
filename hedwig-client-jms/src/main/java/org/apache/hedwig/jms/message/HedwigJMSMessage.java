@@ -13,7 +13,6 @@ import javax.jms.Message;
 import javax.jms.MessageFormatException;
 import javax.jms.MessageNotWriteableException;
 
-import org.apache.derby.iapi.store.raw.xact.TransactionId;
 import org.apache.hedwig.jms.administered.HedwigDestination;
 import org.apache.hedwig.jms.administered.HedwigSession;
 import org.apache.hedwig.protocol.PubSubProtocol.JmsBodyType;
@@ -651,25 +650,27 @@ public abstract class HedwigJMSMessage implements Message {
         return 0;
     }
 
-    public Object getGroupID() {
-        // TODO Auto-generated method stub
-        return null;
-    }
-
-    public String getGroupSequence() {
-        // TODO Auto-generated method stub
-        return null;
-    }
-
-    public TransactionId getOriginalTransactionId() {
-        // TODO Auto-generated method stub
-        return null;
-    }
-
-    public TransactionId getTransactionId() {
-        // TODO Auto-generated method stub
-        return null;
-    }
+    // NOTE: these refer to optional properties, currently not supported in
+    // Hedwig
+    // public Object getGroupID() {
+    // // TODO Auto-generated method stub
+    // return null;
+    // }
+    //
+    // public String getGroupSequence() {
+    // // TODO Auto-generated method stub
+    // return null;
+    // }
+    //
+    // public TransactionId getOriginalTransactionId() {
+    // // TODO Auto-generated method stub
+    // return null;
+    // }
+    //
+    // public TransactionId getTransactionId() {
+    // // TODO Auto-generated method stub
+    // return null;
+    // }
 
     public abstract void doPrepareForSend() throws JMSException;
 

@@ -19,7 +19,10 @@ import org.apache.hedwig.exceptions.PubSubException.ClientNotSubscribedException
 import org.apache.hedwig.exceptions.PubSubException.CouldNotConnectException;
 import org.apache.hedwig.exceptions.PubSubException.ServiceDownException;
 import org.apache.hedwig.jms.administered.HedwigSession;
+import org.apache.hedwig.jms.filter.BooleanExpression;
+import org.apache.hedwig.jms.filter.MessageEvaluationContext;
 import org.apache.hedwig.jms.message.HedwigJMSMessage;
+import org.apache.hedwig.jms.selector.SelectorParser;
 import org.apache.hedwig.jms.util.ClientIdGenerator;
 import org.apache.hedwig.jms.util.JMSUtils;
 import org.apache.hedwig.protocol.PubSubProtocol.MessageSeqId;
@@ -37,11 +40,15 @@ public class HedwigMessageConsumer implements MessageConsumer, MessageHandler {
     Lock connectionStateLock = new ReentrantLock();
     MessageListener messageListener;
     private HedwigClient hedwigClient;
+    private String selectorQuery;
+    private BooleanExpression selector;
 
-    public HedwigMessageConsumer(HedwigSession session, ByteString topicName, ClientConfiguration hedwigClientConfig) {
+    public HedwigMessageConsumer(HedwigSession session, ByteString topicName, ClientConfiguration hedwigClientConfig,
+            String selector) {
         this.topicName = topicName;
         this.hedwigSession = session;
         this.subscriberId = ByteString.copyFromUtf8(ClientIdGenerator.getNewClientId());
+        this.selectorQuery = selector;
         try {
             this.hedwigClient = new HedwigClient(hedwigClientConfig);
 
@@ -79,8 +86,7 @@ public class HedwigMessageConsumer implements MessageConsumer, MessageHandler {
     @Override
     public String getMessageSelector() throws JMSException {
         checkSessionNotClosed();
-        // TODO Auto-generated method stub
-        return null;
+        return selectorQuery;
     }
 
     @Override
@@ -129,6 +135,17 @@ public class HedwigMessageConsumer implements MessageConsumer, MessageHandler {
             retrieved = hedwigSession.pollNextMessage(subscriberId, 0, TimeUnit.MILLISECONDS);
         }
         if (retrieved != null) {
+            if (selectorQuery != null) {
+                if (selector == null) {
+                    selector = SelectorParser.parse(selectorQuery);
+                }
+                MessageEvaluationContext context = new MessageEvaluationContext();
+                context.setMessage((HedwigJMSMessage) retrieved);
+                if (!selector.matches(context)) {
+                    return doReceive(timeout);
+                }
+            }
+
             hedwigSession.messageSuccessfullyDelivered(retrieved);
             return retrieved;
         } else {

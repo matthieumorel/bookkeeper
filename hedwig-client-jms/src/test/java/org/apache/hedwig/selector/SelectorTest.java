@@ -22,13 +22,13 @@ import javax.jms.Message;
 
 import junit.framework.TestCase;
 
-import org.apache.activemq.filter.BooleanExpression;
-import org.apache.activemq.filter.MessageEvaluationContext;
-import org.apache.activemq.selector.SelectorParser;
 import org.apache.hedwig.jms.administered.HedwigTopic;
 import org.apache.hedwig.jms.administered.MockHedwigSession;
+import org.apache.hedwig.jms.filter.BooleanExpression;
+import org.apache.hedwig.jms.filter.MessageEvaluationContext;
 import org.apache.hedwig.jms.message.HedwigJMSMessage;
 import org.apache.hedwig.jms.message.HedwigJMSTextMessage;
+import org.apache.hedwig.jms.selector.SelectorParser;
 
 /**
  * From ActiveMQ's codebase

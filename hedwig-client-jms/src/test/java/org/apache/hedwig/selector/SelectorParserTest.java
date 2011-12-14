@@ -18,12 +18,12 @@ package org.apache.hedwig.selector;
 
 import junit.framework.TestCase;
 
-import org.apache.activemq.filter.BooleanExpression;
-import org.apache.activemq.filter.ComparisonExpression;
-import org.apache.activemq.filter.Expression;
-import org.apache.activemq.filter.LogicExpression;
-import org.apache.activemq.filter.PropertyExpression;
-import org.apache.activemq.selector.SelectorParser;
+import org.apache.hedwig.jms.filter.BooleanExpression;
+import org.apache.hedwig.jms.filter.ComparisonExpression;
+import org.apache.hedwig.jms.filter.Expression;
+import org.apache.hedwig.jms.filter.LogicExpression;
+import org.apache.hedwig.jms.filter.PropertyExpression;
+import org.apache.hedwig.jms.selector.SelectorParser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
