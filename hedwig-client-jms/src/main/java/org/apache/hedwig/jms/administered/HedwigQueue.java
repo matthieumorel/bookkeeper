@@ -17,4 +17,30 @@ public class HedwigQueue extends HedwigDestination implements Queue {
         return null;
     }
 
+    @Override
+    public byte getDestinationType() {
+        return HedwigDestination.QUEUE_DEST_TYPE;
+    }
+
+    @Override
+    public String[] getDestinationPaths() {
+        // TODO Auto-generated method stub
+        return null;
+    }
+
+    @Override
+    public boolean isQueue() {
+        return true;
+    }
+
+    @Override
+    public String getPhysicalName() {
+        return name;
+    }
+
+    @Override
+    public boolean isTemporary() {
+        return false;
+    }
+
 }

@@ -2,7 +2,12 @@ package org.apache.hedwig.jms.administered;
 
 import javax.jms.Destination;
 
-public class HedwigDestination implements Destination {
+public abstract class HedwigDestination implements Destination {
+    public static final byte TEMPORARY_TOPIC_DEST_TYPE = 1;
+    public static final byte TOPIC_DEST_TYPE = 2;
+    public static final byte QUEUE_DEST_TYPE = 2;
+
+    public abstract byte getDestinationType();
 
     public boolean isComposite() {
         // TODO Auto-generated method stub
@@ -10,38 +15,19 @@ public class HedwigDestination implements Destination {
     }
 
     public HedwigDestination[] getCompositeDestinations() {
-        // TODO Auto-generated method stub
-        return null;
-    }
-
-    public String[] getDestinationPaths() {
-        // TODO Auto-generated method stub
-        return null;
-    }
-
-    public boolean isTemporary() {
-        // TODO Auto-generated method stub
-        return false;
-    }
-
-    public boolean isQueue() {
-        // TODO Auto-generated method stub
-        return false;
+        throw new RuntimeException("Not implemented yet");
     }
 
     public static int compare(HedwigDestination destination, HedwigDestination destination2) {
-        // TODO Auto-generated method stub
-        return 0;
+        throw new RuntimeException("Not implemented yet");
     }
 
-    public byte getDestinationType() {
-        // TODO Auto-generated method stub
-        return 0;
-    }
+    public abstract String[] getDestinationPaths();
 
-    public String getPhysicalName() {
-        // TODO Auto-generated method stub
-        return null;
-    }
+    public abstract boolean isTemporary();
+
+    public abstract boolean isQueue();
+
+    public abstract String getPhysicalName();
 
 }

@@ -12,9 +12,12 @@ import javax.jms.JMSException;
 import javax.jms.Message;
 import javax.jms.MessageFormatException;
 import javax.jms.MessageNotWriteableException;
+import javax.jms.TemporaryTopic;
+import javax.jms.Topic;
 
 import org.apache.hedwig.jms.administered.HedwigDestination;
 import org.apache.hedwig.jms.administered.HedwigSession;
+import org.apache.hedwig.jms.util.JMSUtils;
 import org.apache.hedwig.protocol.PubSubProtocol.JmsBodyType;
 import org.apache.hedwig.protocol.PubSubProtocol.Key2Boolean;
 import org.apache.hedwig.protocol.PubSubProtocol.Key2Double;
@@ -345,8 +348,8 @@ public abstract class HedwigJMSMessage implements Message {
 
     @Override
     public Destination getJMSReplyTo() throws JMSException {
-        // TODO Auto-generated method stub
-        return null;
+        return JMSUtils.createDestinationFromDestinationString(getStringProperty("JMSReplyTo"),
+                hedwigSession.getHedwigConnection());
     }
 
     @Override
@@ -576,8 +579,14 @@ public abstract class HedwigJMSMessage implements Message {
     }
 
     @Override
-    public void setJMSReplyTo(Destination arg0) throws JMSException {
-        // TODO Auto-generated method stub
+    public void setJMSReplyTo(Destination destination) throws JMSException {
+        if (destination instanceof TemporaryTopic) {
+            addStringMetadata("JMSReplyTo", "temporaryTopic-" + ((Topic) destination).getTopicName());
+        } else if (destination instanceof Topic) {
+            addStringMetadata("JMSReplyTo", ((Topic) destination).getTopicName());
+        } else {
+            throw new RuntimeException("Hedwig currently only support JMS topics, not JMS queues");
+        }
 
     }
 
