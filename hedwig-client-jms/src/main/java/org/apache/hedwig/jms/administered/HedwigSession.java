@@ -327,16 +327,14 @@ public class HedwigSession implements Session {
 
     @Override
     public TemporaryQueue createTemporaryQueue() throws JMSException {
-        checkSessionNotClosed();
-        // TODO Auto-generated method stub
-        return null;
+        // checkSessionNotClosed();
+        throw new JMSException("Queues are not yet implemented in Hedwig");
     }
 
     @Override
     public TemporaryTopic createTemporaryTopic() throws JMSException {
         checkSessionNotClosed();
-        // TODO Auto-generated method stub
-        return null;
+        return new HedwigTemporaryTopic(connection);
     }
 
     @Override

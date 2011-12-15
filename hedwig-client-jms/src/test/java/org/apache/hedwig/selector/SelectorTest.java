@@ -23,7 +23,6 @@ import javax.jms.Message;
 import junit.framework.TestCase;
 
 import org.apache.hedwig.jms.administered.HedwigTopic;
-import org.apache.hedwig.jms.administered.MockHedwigSession;
 import org.apache.hedwig.jms.filter.BooleanExpression;
 import org.apache.hedwig.jms.filter.MessageEvaluationContext;
 import org.apache.hedwig.jms.message.HedwigJMSMessage;
@@ -41,49 +40,6 @@ public class SelectorTest extends TestCase {
         assertSelector(message, "(trueProp OR falseProp) AND trueProp", true);
         assertSelector(message, "(trueProp OR falseProp) AND falseProp", false);
         assertSelector(message, "trueProp", true);
-
-    }
-
-    // Not currently supported
-    public void disabledTestXPathSelectors() throws Exception {
-        HedwigJMSTextMessage message = new HedwigJMSTextMessage(new MockHedwigSession());
-
-        message.setJMSType("xml");
-        message.setText("<root><a key='first' num='1'/><b key='second' num='2'>b</b></root>");
-
-        assertSelector(message, "XPATH 'root/a'", true);
-        assertSelector(message, "XPATH '//root/b'", true);
-        assertSelector(message, "XPATH 'root/c'", false);
-        assertSelector(message, "XPATH '//root/b/text()=\"b\"'", true);
-        assertSelector(message, "XPATH '//root/b=\"b\"'", true);
-        assertSelector(message, "XPATH '//root/b=\"c\"'", false);
-        assertSelector(message, "XPATH '//root/b!=\"c\"'", true);
-
-        assertSelector(message, "XPATH '//root/*[@key=''second'']'", true);
-        assertSelector(message, "XPATH '//root/*[@key=''third'']'", false);
-        assertSelector(message, "XPATH '//root/a[@key=''first'']'", true);
-        assertSelector(message, "XPATH '//root/a[@num=1]'", true);
-        assertSelector(message, "XPATH '//root/a[@key=''second'']'", false);
-
-        assertSelector(message, "XPATH '/root/*[@key=''first'' or @key=''third'']'", true);
-        assertSelector(message, "XPATH '//root/*[@key=''third'' or @key=''forth'']'", false);
-
-        assertSelector(message, "XPATH '/root/b=''b'' and /root/b[@key=''second'']'", true);
-        assertSelector(message, "XPATH '/root/b=''b'' and /root/b[@key=''first'']'", false);
-
-        assertSelector(message, "XPATH 'not(//root/a)'", false);
-        assertSelector(message, "XPATH 'not(//root/c)'", true);
-        assertSelector(message, "XPATH '//root/a[not(@key=''first'')]'", false);
-        assertSelector(message, "XPATH '//root/a[not(not(@key=''first''))]'", true);
-
-        assertSelector(message, "XPATH 'string(//root/b)'", true);
-        assertSelector(message, "XPATH 'string(//root/a)'", false);
-
-        assertSelector(message, "XPATH 'sum(//@num) < 10'", true);
-        assertSelector(message, "XPATH 'sum(//@num) > 10'", false);
-
-        assertSelector(message, "XPATH '//root/a[@num > 1]'", false);
-        assertSelector(message, "XPATH '//root/b[@num > 1]'", true);
 
     }
 
