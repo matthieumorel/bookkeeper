@@ -122,8 +122,9 @@ public class HedwigMessageConsumer implements MessageConsumer, MessageHandler {
 
     /**
      * NOTE: Since filtering is performed by the client, clients receive all
-     * messages. The timeout is reset if an incoming message fails a filter, so
-     * that the timeout only applies to messages that can actually be processed.
+     * messages. The timeout is reset if an incoming message fails a filter or
+     * if it is expired, so that the timeout only applies to messages that can
+     * actually be processed.
      */
     private Message doReceive(long timeout) throws JMSException {
         checkSessionNotClosed();

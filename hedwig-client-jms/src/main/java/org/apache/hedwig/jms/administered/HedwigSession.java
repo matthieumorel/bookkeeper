@@ -169,11 +169,11 @@ public class HedwigSession implements Session {
         return sessionMessageQueue.offerReceivedMessage(subscriberId, topicName, message);
     }
 
-    public HedwigJMSMessage takeNextMessage(ByteString subscriberId) {
+    public HedwigJMSMessage takeNextMessage(ByteString subscriberId) throws JMSException {
         return sessionMessageQueue.retrieve(subscriberId, true, 0, null);
     }
 
-    public HedwigJMSMessage pollNextMessage(ByteString subscriberId, long time, TimeUnit timeUnit) {
+    public HedwigJMSMessage pollNextMessage(ByteString subscriberId, long time, TimeUnit timeUnit) throws JMSException {
         return sessionMessageQueue.retrieve(subscriberId, false, time, timeUnit);
     }
 

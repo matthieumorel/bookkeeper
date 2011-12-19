@@ -23,6 +23,7 @@ import org.apache.hedwig.jms.message.HedwigJMSMessage;
 import org.apache.hedwig.jms.message.JMSMessageFactory;
 import org.apache.hedwig.protocol.PubSubProtocol;
 import org.apache.hedwig.protocol.PubSubProtocol.MessageSeqId;
+import org.apache.log4j.Logger;
 
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ListMultimap;
@@ -146,6 +147,11 @@ public class SessionMessageQueue {
         lock.lock();
         try {
             HedwigJMSMessage jmsMessage = JMSMessageFactory.getMessage(hedwigSession, subscriberId, message);
+            if (jmsMessage.getJMSExpiration() != 0 && (jmsMessage.getJMSExpiration() < System.currentTimeMillis())) {
+                Logger.getLogger(SessionMessageQueue.class).info(
+                        "JMS message expired and therefore ignored: " + jmsMessage.toString());
+                return false;
+            }
             if (unacknowledgedDeliveredMessageIds.isEmpty()) {
                 recovering = false;
             }
@@ -170,7 +176,8 @@ public class SessionMessageQueue {
                 undeliveredMessageIds.remove(message.getMessage().getMsgId()));
     }
 
-    public HedwigJMSMessage retrieve(ByteString subscriberId, boolean blocking, long time, TimeUnit timeUnit) {
+    public HedwigJMSMessage retrieve(ByteString subscriberId, boolean blocking, long time, TimeUnit timeUnit)
+            throws JMSException {
         lock.lock();
         try {
             List<HedwigJMSMessage> messages = orderedReceivedMessagesBySubscriber.get(subscriberId);
@@ -188,12 +195,10 @@ public class SessionMessageQueue {
             }
             if (!messages.isEmpty()) {
                 HedwigJMSMessage next = messages.remove(0);
-                try {
-                    System.out.println("** returning " + next.getMessage().getMsgId() + " with delivered = "
-                            + next.getJMSRedelivered());
-                } catch (JMSException e) {
-                    // TODO Auto-generated catch block
-                    e.printStackTrace();
+                if (next.getJMSExpiration() != 0 && next.getJMSExpiration() < System.currentTimeMillis()) {
+                    Logger.getLogger(SessionMessageQueue.class).info(
+                            "JMS message expired and therefore ignored: " + next.toString());
+                    return retrieve(subscriberId, blocking, time, timeUnit);
                 }
                 return next;
             } else {
