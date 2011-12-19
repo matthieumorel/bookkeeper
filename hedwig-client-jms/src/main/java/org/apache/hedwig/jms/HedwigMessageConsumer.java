@@ -44,7 +44,7 @@ public class HedwigMessageConsumer implements MessageConsumer, MessageHandler {
     private BooleanExpression selector;
 
     public HedwigMessageConsumer(HedwigSession session, ByteString topicName, ClientConfiguration hedwigClientConfig,
-            String selector) {
+            String selector) throws JMSException {
         this.topicName = topicName;
         this.hedwigSession = session;
         this.subscriberId = ByteString.copyFromUtf8(ClientIdGenerator.getNewClientId());
@@ -54,6 +54,9 @@ public class HedwigMessageConsumer implements MessageConsumer, MessageHandler {
 
             hedwigClient.getSubscriber().subscribe(topicName, subscriberId, CreateOrAttach.CREATE_OR_ATTACH);
             hedwigSession.addConsumer(subscriberId, this);
+
+            // automatically start delivery of Hedwig messages
+            startDelivery();
         } catch (CouldNotConnectException e) {
             e.printStackTrace();
         } catch (ClientAlreadySubscribedException e) {
@@ -206,7 +209,7 @@ public class HedwigMessageConsumer implements MessageConsumer, MessageHandler {
         }
     }
 
-    public void start() throws JMSException {
+    public void startDelivery() throws JMSException {
         try {
             getHedwigClient().getSubscriber().startDelivery(topicName, subscriberId, this);
         } catch (ClientNotSubscribedException e) {
@@ -214,7 +217,7 @@ public class HedwigMessageConsumer implements MessageConsumer, MessageHandler {
         }
     }
 
-    public void stop() throws JMSException {
+    public void stopDelivery() throws JMSException {
         try {
             getHedwigClient().getSubscriber().stopDelivery(topicName, subscriberId);
         } catch (ClientNotSubscribedException e) {

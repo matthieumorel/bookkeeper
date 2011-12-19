@@ -13,7 +13,7 @@ import com.google.protobuf.ByteString;
 public class HedwigTopicSubscriber extends HedwigMessageConsumer implements TopicSubscriber {
 
     public HedwigTopicSubscriber(HedwigSession hedwigSession, ByteString topicName,
-            ClientConfiguration hedwigClientConfig, String selector) {
+            ClientConfiguration hedwigClientConfig, String selector) throws JMSException {
         super(hedwigSession, topicName, hedwigClientConfig, selector);
         // TODO Auto-generated constructor stub
     }

@@ -74,7 +74,7 @@ public class HedwigSession implements Session {
         Iterator<Entry<ByteString, HedwigMessageConsumer>> iterator = consumers.entrySet().iterator();
         while (iterator.hasNext()) {
             HedwigMessageConsumer consumer = iterator.next().getValue();
-            consumer.start();
+            consumer.startDelivery();
         }
     }
 
@@ -82,7 +82,7 @@ public class HedwigSession implements Session {
         Iterator<Entry<ByteString, HedwigMessageConsumer>> iterator = consumers.entrySet().iterator();
         while (iterator.hasNext()) {
             HedwigMessageConsumer consumer = iterator.next().getValue();
-            consumer.stop();
+            consumer.stopDelivery();
         }
     }
 
@@ -443,7 +443,8 @@ public class HedwigSession implements Session {
 
     @Override
     public void run() {
-        // TODO Auto-generated method stub
+        throw new RuntimeException(
+                "Optional operation Session#run() is not currently supported in Hedwig's JMS implementation");
 
     }
 

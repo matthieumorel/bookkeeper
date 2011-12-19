@@ -24,8 +24,7 @@ import org.junit.Test;
 
 public class TestServiceRequests extends HedwigJMSBaseTest {
 
-    // added a timeout because this currently fails
-    @Test(timeout = 10000)
+    @Test
     public void testTopicRequestor() throws Exception {
         System.setProperty(HedwigTopicConnection.HEDWIG_CLIENT_CONFIG_FILE, hedwigConfigFile.getAbsolutePath());
 
@@ -54,9 +53,6 @@ public class TestServiceRequests extends HedwigJMSBaseTest {
         String text = "text@" + System.currentTimeMillis();
         TextMessage msg = session1.createTextMessage(text);
 
-        // TODO: currently we never get the reply. It is published to the
-        // correct temporary topic in Hedwig, but for some reason does not get
-        // delivered to the subscriber created by the TopicRequestor
         Message reply = topicRequestor.request(msg);
 
         Assert.assertEquals(text + "-reply", ((TextMessage) reply).getText());
