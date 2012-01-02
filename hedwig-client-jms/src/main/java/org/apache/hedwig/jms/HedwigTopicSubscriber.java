@@ -14,8 +14,14 @@ public class HedwigTopicSubscriber extends HedwigMessageConsumer implements Topi
 
     public HedwigTopicSubscriber(HedwigSession hedwigSession, ByteString topicName,
             ClientConfiguration hedwigClientConfig, String selector) throws JMSException {
-        super(hedwigSession, topicName, hedwigClientConfig, selector);
-        // TODO Auto-generated constructor stub
+        // a topic subscriber passed without a client id is necessarily a non
+        // durable subscriber
+        super(hedwigSession, topicName, hedwigClientConfig, selector, false);
+    }
+
+    public HedwigTopicSubscriber(HedwigSession session, String clientId, ByteString topicName,
+            ClientConfiguration hedwigClientConfig, String selector, boolean durable) throws JMSException {
+        super(session, clientId, topicName, hedwigClientConfig, selector, durable);
     }
 
     @Override

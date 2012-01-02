@@ -38,4 +38,23 @@ public class HedwigTopicSession extends HedwigSession implements TopicSession {
                 .getHedwigClientConfig(), messageSelector);
     }
 
+    @Override
+    public TopicSubscriber createDurableSubscriber(Topic topic, String durableSubscriptionClientId) throws JMSException {
+        checkSessionNotClosed();
+        return new HedwigTopicSubscriber(this, durableSubscriptionClientId, ByteString.copyFromUtf8(topic
+                .getTopicName()), getHedwigConnection().getHedwigClientConfig(), null, true);
+    }
+
+    @Override
+    public TopicSubscriber createDurableSubscriber(Topic topic, String durableSubscriptionClientId, String selector,
+            boolean noLocal) throws JMSException {
+        if (noLocal) {
+            throw new UnsupportedOperationException(
+                    "Hedwig currently does not distinguish between local and non local subscriptions");
+        }
+        checkSessionNotClosed();
+        return new HedwigTopicSubscriber(this, durableSubscriptionClientId, ByteString.copyFromUtf8(topic
+                .getTopicName()), getHedwigConnection().getHedwigClientConfig(), selector, true);
+    }
+
 }

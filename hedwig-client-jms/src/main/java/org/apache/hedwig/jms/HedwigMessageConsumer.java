@@ -34,6 +34,7 @@ import com.google.protobuf.ByteString;
 
 public class HedwigMessageConsumer implements MessageConsumer, MessageHandler {
 
+    public static final String CLIENT_ID_ZK_PREFIX = "CLIENT_ID/_/";
     protected ByteString topicName;
     protected ByteString subscriberId;
     protected HedwigSession hedwigSession;
@@ -42,13 +43,20 @@ public class HedwigMessageConsumer implements MessageConsumer, MessageHandler {
     private HedwigClient hedwigClient;
     private String selectorQuery;
     private BooleanExpression selector;
+    private boolean durable = false;
 
     public HedwigMessageConsumer(HedwigSession session, ByteString topicName, ClientConfiguration hedwigClientConfig,
-            String selector) throws JMSException {
+            String selector, boolean durable) throws JMSException {
+        this(session, ClientIdGenerator.getNewClientId(), topicName, hedwigClientConfig, selector, durable);
+    }
+
+    public HedwigMessageConsumer(HedwigSession session, String clientId, ByteString topicName,
+            ClientConfiguration hedwigClientConfig, String selector, boolean durable) throws JMSException {
         this.topicName = topicName;
         this.hedwigSession = session;
-        this.subscriberId = ByteString.copyFromUtf8(ClientIdGenerator.getNewClientId());
         this.selectorQuery = selector;
+        this.durable = durable;
+        this.subscriberId = ByteString.copyFromUtf8(CLIENT_ID_ZK_PREFIX + clientId);
         try {
             this.hedwigClient = new HedwigClient(hedwigClientConfig);
 
@@ -165,21 +173,22 @@ public class HedwigMessageConsumer implements MessageConsumer, MessageHandler {
 
     @Override
     public void close() throws JMSException {
-        try {
-            getHedwigClient().getSubscriber().unsubscribe(topicName, subscriberId);
-        } catch (ClientNotSubscribedException e) {
-            throw JMSUtils.createJMSException(
-                    "Internal error: this consumer is not subscribed to the broker with topic "
-                            + topicName.toStringUtf8() + "]", e);
-        } catch (CouldNotConnectException e) {
-            throw JMSUtils.createJMSException(
-                    "Internal error: cannot connect to the broker for propertly closing this consumer", e);
-        } catch (ServiceDownException e) {
-            throw JMSUtils.createJMSException("Internal error: broker is down", e);
-        } catch (InvalidSubscriberIdException e) {
-            throw JMSUtils.createJMSException("Internal error: wrong client id", e);
+        if (!durable) {
+            try {
+                getHedwigClient().getSubscriber().unsubscribe(topicName, subscriberId);
+            } catch (ClientNotSubscribedException e) {
+                throw JMSUtils.createJMSException(
+                        "Internal error: this consumer is not subscribed to the broker with topic "
+                                + topicName.toStringUtf8() + "]", e);
+            } catch (CouldNotConnectException e) {
+                throw JMSUtils.createJMSException(
+                        "Internal error: cannot connect to the broker for propertly closing this consumer", e);
+            } catch (ServiceDownException e) {
+                throw JMSUtils.createJMSException("Internal error: broker is down", e);
+            } catch (InvalidSubscriberIdException e) {
+                throw JMSUtils.createJMSException("Internal error: wrong client id", e);
+            }
         }
-
     }
 
     @Override

@@ -41,6 +41,7 @@ import org.apache.hedwig.jms.message.HedwigJMSMessage;
 import org.apache.hedwig.jms.message.HedwigJMSObjectMessage;
 import org.apache.hedwig.jms.message.HedwigJMSStreamMessage;
 import org.apache.hedwig.jms.message.HedwigJMSTextMessage;
+import org.apache.hedwig.jms.util.JMSUtils;
 import org.apache.hedwig.jms.util.SessionMessageQueue;
 import org.apache.hedwig.protocol.PubSubProtocol.MessageSeqId;
 import org.apache.hedwig.protocol.PubSubProtocol.SubscribeRequest.CreateOrAttach;
@@ -90,7 +91,7 @@ public class HedwigSession implements Session {
         return isClosed;
     }
 
-    private void checkSessionNotClosed() throws IllegalStateException {
+    protected void checkSessionNotClosed() throws IllegalStateException {
         if (isClosed) {
             throw new IllegalStateException("Session is closed");
         }
@@ -258,24 +259,9 @@ public class HedwigSession implements Session {
         ByteString topicName = ByteString.copyFromUtf8(((Topic) destination).getTopicName());
 
         HedwigMessageConsumer consumer = new HedwigMessageConsumer(this, topicName, getHedwigConnection()
-                .getHedwigClientConfig(), messageSelector);
+                .getHedwigClientConfig(), messageSelector, false);
         sessionMessageQueue.addConsumer(consumer.getSubscriberId());
         return consumer;
-    }
-
-    @Override
-    public TopicSubscriber createDurableSubscriber(Topic arg0, String arg1) throws JMSException {
-        checkSessionNotClosed();
-        // TODO Auto-generated method stub
-        return null;
-    }
-
-    @Override
-    public TopicSubscriber createDurableSubscriber(Topic arg0, String arg1, String arg2, boolean arg3)
-            throws JMSException {
-        checkSessionNotClosed();
-        // TODO Auto-generated method stub
-        return null;
     }
 
     @Override
@@ -456,10 +442,42 @@ public class HedwigSession implements Session {
     }
 
     @Override
-    public void unsubscribe(String arg0) throws JMSException {
+    public void unsubscribe(String subscriptionName) throws JMSException {
         checkSessionNotClosed();
-        // TODO Auto-generated method stub
+        // TODO use subscriber#getSubscriptionList ?
+        if (!consumers.containsKey(ByteString
+                .copyFromUtf8(HedwigMessageConsumer.CLIENT_ID_ZK_PREFIX + subscriptionName))) {
+            throw new JMSException("There is no subscription named [" + subscriptionName + "] for this session");
+        }
+        HedwigMessageConsumer hedwigMessageConsumer = consumers.get(ByteString
+                .copyFromUtf8(HedwigMessageConsumer.CLIENT_ID_ZK_PREFIX + subscriptionName));
+        ByteString hedwigTopicName = hedwigMessageConsumer.getHedwigTopicName();
 
+        try {
+            hedwigClient.getSubscriber().unsubscribe(hedwigTopicName,
+                    ByteString.copyFromUtf8(HedwigMessageConsumer.CLIENT_ID_ZK_PREFIX + subscriptionName));
+        } catch (ClientNotSubscribedException e) {
+            throw JMSUtils.createJMSException("Internal error: this consumer [" + subscriptionName
+                    + "] is not subscribed to the broker with topic " + hedwigTopicName.toStringUtf8() + "]", e);
+        } catch (CouldNotConnectException e) {
+            throw JMSUtils.createJMSException(
+                    "Internal error: cannot connect to the broker for properly closing this consumer", e);
+        } catch (ServiceDownException e) {
+            throw JMSUtils.createJMSException("Internal error: broker is down", e);
+        } catch (InvalidSubscriberIdException e) {
+            throw JMSUtils.createJMSException("Internal error: wrong client id", e);
+        }
+    }
+
+    @Override
+    public TopicSubscriber createDurableSubscriber(Topic topic, String name) throws JMSException {
+        throw new JMSException("Not implemented");
+    }
+
+    @Override
+    public TopicSubscriber createDurableSubscriber(Topic topic, String name, String messageSelector, boolean noLocal)
+            throws JMSException {
+        throw new JMSException("Not implemented");
     }
 
 }
