@@ -8,8 +8,12 @@ import javax.jms.MessageProducer;
 
 import org.apache.hedwig.jms.administered.HedwigSession;
 import org.apache.hedwig.jms.message.HedwigJMSMessage;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public abstract class HedwigMessageProducer implements MessageProducer {
+
+    private static final Logger logger = LoggerFactory.getLogger(HedwigMessageProducer.class);
 
     protected HedwigSession hedwigSession;
     private Destination defaultDestination;
@@ -102,6 +106,11 @@ public abstract class HedwigMessageProducer implements MessageProducer {
     public void setDeliveryMode(int deliveryMode) throws JMSException {
         if (!(DeliveryMode.PERSISTENT == deliveryMode || DeliveryMode.NON_PERSISTENT == deliveryMode)) {
             throw new JMSException("Invalid delivery mode", IllegalArgumentException.class.getName());
+        }
+        if (DeliveryMode.NON_PERSISTENT == deliveryMode) {
+            logger.debug("Specifying a non-persistent delivery mode has no effect in Hedwig's JMS implementation "
+                    + "because all messages are persistent. Messages will be delivered once-and-only-once "
+                    + "(if they are not destructed).");
         }
         this.defaultDeliveryMode = deliveryMode;
     }

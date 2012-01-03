@@ -644,9 +644,9 @@ public abstract class HedwigJMSMessage implements Message {
         return builder.build();
     }
 
-    public boolean isPersistent() {
-        // TODO Auto-generated method stub
-        return false;
+    public final boolean isPersistent() {
+        // messages are always persistent in Hedwig
+        return true;
     }
 
     public HedwigDestination getOriginalJMSDestination() {
