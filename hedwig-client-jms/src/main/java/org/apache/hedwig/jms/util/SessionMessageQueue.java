@@ -31,7 +31,7 @@ import com.google.protobuf.ByteString;
 
 /**
  * Serializes messages in a session
- * 
+ *
  */
 public class SessionMessageQueue {
 

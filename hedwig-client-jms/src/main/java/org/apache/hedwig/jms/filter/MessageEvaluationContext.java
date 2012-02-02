@@ -27,8 +27,8 @@ import org.apache.hedwig.jms.message.HedwigJMSMessage;
  * cost of evaluating against the message. Those selectors may whish to cache
  * evaluation results associated with the message in the
  * MessageEvaluationContext.
- * 
- * 
+ *
+ *
  */
 public class MessageEvaluationContext {
 

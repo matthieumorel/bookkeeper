@@ -7,34 +7,34 @@ import javax.jms.TopicConnection;
 import javax.jms.TopicConnectionFactory;
 
 public class HedwigConnectionFactory implements ConnectionFactory, TopicConnectionFactory {
-	
-	public HedwigConnectionFactory() {
-		
-	}
 
-	@Override
-	public Connection createConnection() throws JMSException {
-		// TODO Auto-generated method stub
-		return null;
-	}
+    public HedwigConnectionFactory() {
 
-	@Override
-	public Connection createConnection(String arg0, String arg1)
-			throws JMSException {
-		// TODO Auto-generated method stub
-		return null;
-	}
+    }
 
-	@Override
-	public TopicConnection createTopicConnection() throws JMSException {
-		return new HedwigTopicConnection();
-	}
+    @Override
+    public Connection createConnection() throws JMSException {
+        // TODO Auto-generated method stub
+        return null;
+    }
 
-	@Override
-	public TopicConnection createTopicConnection(String arg0, String arg1)
-			throws JMSException {
-		// TODO Auto-generated method stub
-		return null;
-	}
+    @Override
+    public Connection createConnection(String arg0, String arg1)
+            throws JMSException {
+        // TODO Auto-generated method stub
+        return null;
+    }
+
+    @Override
+    public TopicConnection createTopicConnection() throws JMSException {
+        return new HedwigTopicConnection();
+    }
+
+    @Override
+    public TopicConnection createTopicConnection(String arg0, String arg1)
+            throws JMSException {
+        // TODO Auto-generated method stub
+        return null;
+    }
 
 }

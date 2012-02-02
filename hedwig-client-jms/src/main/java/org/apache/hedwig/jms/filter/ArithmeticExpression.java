@@ -20,8 +20,8 @@ import javax.jms.JMSException;
 
 /**
  * An expression which performs an operation on two expression values
- * 
- * 
+ *
+ *
  */
 public abstract class ArithmeticExpression extends BinaryExpression {
 

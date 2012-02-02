@@ -35,8 +35,8 @@ import org.apache.hedwig.jms.administered.HedwigDestination;
  * pretty fast. <br>
  * Looking up of a value could return a single value or a List of matching
  * values if a wildcard or composite destination is used.
- * 
- * 
+ *
+ *
  */
 public class DestinationMap {
     protected static final String ANY_DESCENDENT = DestinationFilter.ANY_DESCENDENT;
@@ -52,7 +52,7 @@ public class DestinationMap {
      * destinations this is typically a List of one single value, for wildcards
      * or composite destinations this will typically be a List of matching
      * values.
-     * 
+     *
      * @param key
      *            the destination to lookup
      * @return a List of matching values or an empty list if there are no
@@ -190,7 +190,7 @@ public class DestinationMap {
      * Returns the value which matches the given destination or null if there is
      * no matching value. If there are multiple values, the results are sorted
      * and the last item (the biggest) is returned.
-     * 
+     *
      * @param destination
      *            the destination to find the value for
      * @return the largest matching value or null if no value matches

@@ -22,8 +22,8 @@ import javax.jms.JMSException;
 
 /**
  * Represents a constant expression
- * 
- * 
+ *
+ *
  */
 public class ConstantExpression implements Expression {
 
@@ -119,7 +119,7 @@ public class ConstantExpression implements Expression {
 
     /**
      * TODO: more efficient hashCode()
-     * 
+     *
      * @see java.lang.Object#hashCode()
      */
     public int hashCode() {
@@ -128,7 +128,7 @@ public class ConstantExpression implements Expression {
 
     /**
      * TODO: more efficient hashCode()
-     * 
+     *
      * @see java.lang.Object#equals(java.lang.Object)
      */
     public boolean equals(Object o) {
@@ -143,7 +143,7 @@ public class ConstantExpression implements Expression {
     /**
      * Encodes the value of string so that it looks like it would look like when
      * it was provided in a selector.
-     * 
+     *
      * @param string
      * @return
      */

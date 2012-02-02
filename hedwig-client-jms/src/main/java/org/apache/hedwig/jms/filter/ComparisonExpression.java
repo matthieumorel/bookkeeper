@@ -25,8 +25,8 @@ import javax.jms.JMSException;
 
 /**
  * A filter performing a comparison of two objects
- * 
- * 
+ *
+ *
  */
 public abstract class ComparisonExpression extends BinaryExpression implements BooleanExpression {
 
@@ -288,7 +288,7 @@ public abstract class ComparisonExpression extends BinaryExpression implements B
 
     /**
      * Only Numeric expressions can be used in >, >=, < or <= expressions.s
-     * 
+     *
      * @param expr
      */
     public static void checkLessThanOperand(Expression expr) {
@@ -309,7 +309,7 @@ public abstract class ComparisonExpression extends BinaryExpression implements B
     /**
      * Validates that the expression can be used in == or <> expression. Cannot
      * not be NULL TRUE or FALSE litterals.
-     * 
+     *
      * @param expr
      */
     public static void checkEqualOperand(Expression expr) {

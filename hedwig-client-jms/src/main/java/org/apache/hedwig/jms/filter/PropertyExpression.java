@@ -30,8 +30,8 @@ import org.apache.hedwig.jms.util.JMSUtils;
 
 /**
  * Represents a property expression
- * 
- * 
+ *
+ *
  */
 public class PropertyExpression implements Expression {
 

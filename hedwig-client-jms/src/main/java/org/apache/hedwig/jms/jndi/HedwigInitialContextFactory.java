@@ -8,10 +8,10 @@ import javax.naming.spi.InitialContextFactory;
 
 public class HedwigInitialContextFactory implements InitialContextFactory {
 
-	@Override
-	public Context getInitialContext(Hashtable<?, ?> environment)
-			throws NamingException {
-		return new HedwigContext(environment);
-	}
+    @Override
+    public Context getInitialContext(Hashtable<?, ?> environment)
+            throws NamingException {
+        return new HedwigContext(environment);
+    }
 
 }

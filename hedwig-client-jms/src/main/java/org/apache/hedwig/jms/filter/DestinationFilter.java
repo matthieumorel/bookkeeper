@@ -26,8 +26,8 @@ import org.apache.hedwig.jms.util.JMSUtils;
 
 /**
  * Represents a filter which only operates on Destinations
- * 
- * 
+ *
+ *
  */
 public abstract class DestinationFilter implements BooleanExpression {
 

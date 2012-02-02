@@ -23,10 +23,10 @@ import javax.jms.JMSException;
  * A BooleanExpression is an expression that always
  * produces a Boolean result.
  *
- * 
+ *
  */
 public interface BooleanExpression extends Expression {
-    
+
     /**
      * @param message
      * @return true if the expression evaluates to Boolean.TRUE.

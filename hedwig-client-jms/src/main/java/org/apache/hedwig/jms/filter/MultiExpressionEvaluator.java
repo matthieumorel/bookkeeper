@@ -63,7 +63,7 @@ import javax.jms.JMSException;
  * threaded, chache invalidation is done quickly by incrementing a 'view'
  * counter. When a CacheExpressionnotices it's last cached value was generated
  * in an old 'view', it invalidates its cached value.
- * 
+ *
  *  $Date: 2005/08/27 03:52:36 $
  */
 public class MultiExpressionEvaluator {
@@ -215,7 +215,7 @@ public class MultiExpressionEvaluator {
      * Removes an expression from the cache. Updates the reference counters on
      * the CacheExpression object. When the refernce counter goes to zero, the
      * entry int the Expression to CacheExpression map is removed.
-     * 
+     *
      * @param cn
      */
     private void removeFromCache(CacheExpression cn) {
@@ -238,7 +238,7 @@ public class MultiExpressionEvaluator {
      * Evaluates the message against all the Expressions added to this object.
      * The added ExpressionListeners are notified of the result of the
      * evaluation.
-     * 
+     *
      * @param message
      */
     public void evaluate(MessageEvaluationContext message) {

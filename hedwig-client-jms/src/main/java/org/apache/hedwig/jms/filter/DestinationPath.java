@@ -27,8 +27,8 @@ import org.apache.hedwig.jms.message.HedwigJMSMessage;
 
 /**
  * Helper class for decomposing a Destination into a number of paths
- * 
- * 
+ *
+ *
  */
 public final class DestinationPath {
     protected static final char SEPARATOR = '.';
@@ -66,7 +66,7 @@ public final class DestinationPath {
 
     /**
      * Converts the paths to a single String seperated by dots.
-     * 
+     *
      * @param paths
      * @return
      */

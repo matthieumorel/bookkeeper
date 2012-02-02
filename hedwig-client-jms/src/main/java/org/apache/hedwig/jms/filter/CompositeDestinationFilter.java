@@ -20,8 +20,8 @@ import org.apache.hedwig.jms.administered.HedwigDestination;
 
 /**
  * A {@link DestinationFilter} used for composite destinations
- * 
- * 
+ *
+ *
  */
 public class CompositeDestinationFilter extends DestinationFilter {
 

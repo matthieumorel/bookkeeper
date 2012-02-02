@@ -19,8 +19,8 @@ package org.apache.hedwig.jms.filter;
 
 /**
  * NonCached version of the MessageEvaluationContext
- * 
- * 
+ *
+ *
  */
 public class NonCachedMessageEvaluationContext extends MessageEvaluationContext {
 

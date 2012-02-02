@@ -29,9 +29,9 @@ import org.apache.hedwig.protocol.PubSubProtocol.Message.Builder;
 
 import com.google.protobuf.ByteString;
 
-// TODO This class is both read and written. The underlying message is a google protobuf message. 
+// TODO This class is both read and written. The underlying message is a google protobuf message.
 // A protocol buffer message can only be read once it is built. Once it is built, it cannot be modified.
-// Therefore, for now, to support consecutive and mixed reads and writes, we systematically build the underlying 
+// Therefore, for now, to support consecutive and mixed reads and writes, we systematically build the underlying
 // protobuf message and create a new builder from that message, for every write operation.
 // This surely is inefficient and is a good place to look for performance improvements!
 // TODO add checks on property keys

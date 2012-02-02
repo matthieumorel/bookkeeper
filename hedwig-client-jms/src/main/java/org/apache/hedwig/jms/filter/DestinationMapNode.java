@@ -27,8 +27,8 @@ import java.util.Set;
 
 /**
  * An implementation class used to implement {@link DestinationMap}
- * 
- * 
+ *
+ *
  */
 public class DestinationMapNode implements DestinationNode {
     protected static final String ANY_CHILD = DestinationMap.ANY_CHILD;

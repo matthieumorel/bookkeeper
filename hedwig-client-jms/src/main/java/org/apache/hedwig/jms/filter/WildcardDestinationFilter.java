@@ -21,8 +21,8 @@ import org.apache.hedwig.jms.administered.HedwigDestination;
 
 /**
  * Matches messages which contain wildcards like "A.B.*.*"
- * 
- * 
+ *
+ *
  */
 public class WildcardDestinationFilter extends DestinationFilter {
 
@@ -31,7 +31,7 @@ public class WildcardDestinationFilter extends DestinationFilter {
 
     /**
      * An array of paths containing * characters
-     * 
+     *
      * @param prefixes
      */
     public WildcardDestinationFilter(String[] prefixes, byte destinationType) {

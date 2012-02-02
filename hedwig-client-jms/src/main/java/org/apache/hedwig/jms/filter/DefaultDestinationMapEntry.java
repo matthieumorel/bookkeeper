@@ -18,10 +18,10 @@ package org.apache.hedwig.jms.filter;
 
 /**
  * A default entry in a DestinationMap which holds a single value.
- * 
+ *
  * @org.apache.xbean.XBean element="destinationEntry"
- * 
- * 
+ *
+ *
  */
 public class DefaultDestinationMapEntry extends DestinationMapEntry {
     private Object value;

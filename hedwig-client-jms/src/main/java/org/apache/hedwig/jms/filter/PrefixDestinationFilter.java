@@ -21,8 +21,8 @@ import org.apache.hedwig.jms.administered.HedwigDestination;
 
 /**
  * Matches messages which match a prefix like "A.B.>"
- * 
- * 
+ *
+ *
  */
 public class PrefixDestinationFilter extends DestinationFilter {
 
@@ -31,7 +31,7 @@ public class PrefixDestinationFilter extends DestinationFilter {
 
     /**
      * An array of paths, the last path is '>'
-     * 
+     *
      * @param prefixes
      */
     public PrefixDestinationFilter(String[] prefixes, byte destinationType) {

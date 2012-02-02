@@ -30,163 +30,163 @@ import org.junit.Test;
 
 public class TestSimplePubSub extends HedwigJMSBaseTest {
 
-	static final int MAX_MESSAGES = 1000;
-	private TopicSession subscriberTopicSession;
-	private TopicSession publisherTopicSession;
-	private TopicConnection subscriberTopicConnection;
-	private TopicConnection publisherTopicConnection;
-	private TopicPublisher topicPublisher;
-	private TopicSubscriber subscriber;
+    static final int MAX_MESSAGES = 1000;
+    private TopicSession subscriberTopicSession;
+    private TopicSession publisherTopicSession;
+    private TopicConnection subscriberTopicConnection;
+    private TopicConnection publisherTopicConnection;
+    private TopicPublisher topicPublisher;
+    private TopicSubscriber subscriber;
 
-	@Test
-	public void testTopicProducerConsumer() throws Exception {
+    @Test
+    public void testTopicProducerConsumer() throws Exception {
 
-		System.setProperty(HedwigTopicConnection.HEDWIG_CLIENT_CONFIG_FILE, hedwigConfigFile.getAbsolutePath());
+        System.setProperty(HedwigTopicConnection.HEDWIG_CLIENT_CONFIG_FILE, hedwigConfigFile.getAbsolutePath());
 
-		ServerConfiguration serverConf = new ServerConfiguration();
-		serverConf.loadConf(hedwigConfigFile.toURI().toURL());
+        ServerConfiguration serverConf = new ServerConfiguration();
+        serverConf.loadConf(hedwigConfigFile.toURI().toURL());
 
-		hedwigServer = new PubSubServer(serverConf);
-		Context jndiContext = new InitialContext();
-		TopicConnectionFactory topicConnectionFactoryPublisher = (TopicConnectionFactory) jndiContext
-		        .lookup("TopicConnectionFactory");
-		Topic topic = (Topic) jndiContext.lookup("topic.Topic1");
-		publisherTopicConnection = topicConnectionFactoryPublisher.createTopicConnection();
-		publisherTopicSession = publisherTopicConnection.createTopicSession(false, Session.CLIENT_ACKNOWLEDGE);
+        hedwigServer = new PubSubServer(serverConf);
+        Context jndiContext = new InitialContext();
+        TopicConnectionFactory topicConnectionFactoryPublisher = (TopicConnectionFactory) jndiContext
+                .lookup("TopicConnectionFactory");
+        Topic topic = (Topic) jndiContext.lookup("topic.Topic1");
+        publisherTopicConnection = topicConnectionFactoryPublisher.createTopicConnection();
+        publisherTopicSession = publisherTopicConnection.createTopicSession(false, Session.CLIENT_ACKNOWLEDGE);
 
-		TopicConnectionFactory topicConnectionFactorySubscriber = (TopicConnectionFactory) jndiContext
-		        .lookup("TopicConnectionFactory");
-		subscriberTopicConnection = topicConnectionFactorySubscriber.createTopicConnection();
-		subscriberTopicSession = subscriberTopicConnection.createTopicSession(false, Session.CLIENT_ACKNOWLEDGE);
-		subscriber = subscriberTopicSession.createSubscriber(topic);
-		// since the subscriber only receives
-		// messages published *after* the subscription operation, we must
-		// create the subscriber now
-		Thread.sleep(4000);
+        TopicConnectionFactory topicConnectionFactorySubscriber = (TopicConnectionFactory) jndiContext
+                .lookup("TopicConnectionFactory");
+        subscriberTopicConnection = topicConnectionFactorySubscriber.createTopicConnection();
+        subscriberTopicSession = subscriberTopicConnection.createTopicSession(false, Session.CLIENT_ACKNOWLEDGE);
+        subscriber = subscriberTopicSession.createSubscriber(topic);
+        // since the subscriber only receives
+        // messages published *after* the subscription operation, we must
+        // create the subscriber now
+        Thread.sleep(4000);
 
-		topicPublisher = publisherTopicSession.createPublisher(topic);
-		for (int i = 0; i < MAX_MESSAGES; i++) {
-			TextMessage message = publisherTopicSession.createTextMessage();
-			message.setText("message #" + i);
-			System.out.println("Sent message #" + i);
-			topicPublisher.publish(message);
-		}
+        topicPublisher = publisherTopicSession.createPublisher(topic);
+        for (int i = 0; i < MAX_MESSAGES; i++) {
+            TextMessage message = publisherTopicSession.createTextMessage();
+            message.setText("message #" + i);
+            System.out.println("Sent message #" + i);
+            topicPublisher.publish(message);
+        }
 
-		final CountDownLatch signalMessageReceived = new CountDownLatch(1);
-		// make sure no message is received until we "start" the connection
-		new Timer().schedule(new TimerTask() {
+        final CountDownLatch signalMessageReceived = new CountDownLatch(1);
+        // make sure no message is received until we "start" the connection
+        new Timer().schedule(new TimerTask() {
 
-			@Override
-			public void run() {
-				try {
-					Message received = subscriber.receive(1000);
-					if (received != null) {
-						signalMessageReceived.countDown();
-					}
-				} catch (JMSException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-			}
-		}, 0);
+            @Override
+            public void run() {
+                try {
+                    Message received = subscriber.receive(1000);
+                    if (received != null) {
+                        signalMessageReceived.countDown();
+                    }
+                } catch (JMSException e) {
+                    // TODO Auto-generated catch block
+                    e.printStackTrace();
+                }
+            }
+        }, 0);
 
-		Assert.assertFalse(signalMessageReceived.await(2, TimeUnit.SECONDS));
-		subscriberTopicConnection.start();
-		Assert.assertTrue(signalMessageReceived.await(2, TimeUnit.SECONDS));
-		int i;
-		for (i = 1; i < MAX_MESSAGES; i++) {
-			Message received = subscriber.receive(2000);
-			Assert.assertTrue(received instanceof TextMessage);
-			Assert.assertEquals("message #" + i, ((TextMessage) received).getText());
-		}
-		Assert.assertEquals(MAX_MESSAGES, i);
+        Assert.assertFalse(signalMessageReceived.await(2, TimeUnit.SECONDS));
+        subscriberTopicConnection.start();
+        Assert.assertTrue(signalMessageReceived.await(2, TimeUnit.SECONDS));
+        int i;
+        for (i = 1; i < MAX_MESSAGES; i++) {
+            Message received = subscriber.receive(2000);
+            Assert.assertTrue(received instanceof TextMessage);
+            Assert.assertEquals("message #" + i, ((TextMessage) received).getText());
+        }
+        Assert.assertEquals(MAX_MESSAGES, i);
 
-	}
+    }
 
-	@Test
-	public void testNoDeliveryUntilConnectionStarted() throws Exception, MalformedURLException {
-		System.setProperty(HedwigTopicConnection.HEDWIG_CLIENT_CONFIG_FILE, hedwigConfigFile.getAbsolutePath());
+    @Test
+    public void testNoDeliveryUntilConnectionStarted() throws Exception, MalformedURLException {
+        System.setProperty(HedwigTopicConnection.HEDWIG_CLIENT_CONFIG_FILE, hedwigConfigFile.getAbsolutePath());
 
-		ServerConfiguration serverConf = new ServerConfiguration();
-		serverConf.loadConf(hedwigConfigFile.toURI().toURL());
+        ServerConfiguration serverConf = new ServerConfiguration();
+        serverConf.loadConf(hedwigConfigFile.toURI().toURL());
 
-		hedwigServer = new PubSubServer(serverConf);
-		Context jndiContext = new InitialContext();
+        hedwigServer = new PubSubServer(serverConf);
+        Context jndiContext = new InitialContext();
 
-		TopicConnectionFactory topicConnectionFactoryPublisher = (TopicConnectionFactory) jndiContext
-		        .lookup("TopicConnectionFactory");
-		Topic topic = (Topic) jndiContext.lookup("topic.Topic1");
-		TopicConnection topicConnection = topicConnectionFactoryPublisher.createTopicConnection();
-		TopicSession topicSession = topicConnection.createTopicSession(false, Session.CLIENT_ACKNOWLEDGE);
+        TopicConnectionFactory topicConnectionFactoryPublisher = (TopicConnectionFactory) jndiContext
+                .lookup("TopicConnectionFactory");
+        Topic topic = (Topic) jndiContext.lookup("topic.Topic1");
+        TopicConnection topicConnection = topicConnectionFactoryPublisher.createTopicConnection();
+        TopicSession topicSession = topicConnection.createTopicSession(false, Session.CLIENT_ACKNOWLEDGE);
 
-		final CountDownLatch signalReadyToReceive = new CountDownLatch(1);
-		final CountDownLatch signalReceived = new CountDownLatch(1);
-		TopicConnectionFactory subscriberTopicConnectionFactory = (TopicConnectionFactory) jndiContext
-		        .lookup("TopicConnectionFactory");
-		TopicConnection subscriberTopicConnection = subscriberTopicConnectionFactory.createTopicConnection();
-		TopicSession subscriberTopicSession = subscriberTopicConnection.createTopicSession(false,
-		        Session.CLIENT_ACKNOWLEDGE);
-		final TopicSubscriber subscriber = subscriberTopicSession.createSubscriber(topic);
-		Thread.sleep(4000);
-		final List<Message> receivedMessagePlaceholder = new ArrayList<Message>();
+        final CountDownLatch signalReadyToReceive = new CountDownLatch(1);
+        final CountDownLatch signalReceived = new CountDownLatch(1);
+        TopicConnectionFactory subscriberTopicConnectionFactory = (TopicConnectionFactory) jndiContext
+                .lookup("TopicConnectionFactory");
+        TopicConnection subscriberTopicConnection = subscriberTopicConnectionFactory.createTopicConnection();
+        TopicSession subscriberTopicSession = subscriberTopicConnection.createTopicSession(false,
+                Session.CLIENT_ACKNOWLEDGE);
+        final TopicSubscriber subscriber = subscriberTopicSession.createSubscriber(topic);
+        Thread.sleep(4000);
+        final List<Message> receivedMessagePlaceholder = new ArrayList<Message>();
 
-		Thread subscriberThread = new Thread(new Runnable() {
+        Thread subscriberThread = new Thread(new Runnable() {
 
-			@Override
-			public void run() {
+            @Override
+            public void run() {
 
-				try {
-					signalReadyToReceive.countDown();
-					receivedMessagePlaceholder.add(subscriber.receive(1000));
-				} catch (JMSException ignored) {
-				}
-				signalReceived.countDown();
+                try {
+                    signalReadyToReceive.countDown();
+                    receivedMessagePlaceholder.add(subscriber.receive(1000));
+                } catch (JMSException ignored) {
+                }
+                signalReceived.countDown();
 
-			}
-		});
-		subscriberThread.start();
+            }
+        });
+        subscriberThread.start();
 
-		signalReadyToReceive.await();
+        signalReadyToReceive.await();
 
-		TopicPublisher topicPublisher = topicSession.createPublisher(topic);
-		TextMessage message = topicSession.createTextMessage();
-		message.setText("message");
-		topicPublisher.publish(message);
+        TopicPublisher topicPublisher = topicSession.createPublisher(topic);
+        TextMessage message = topicSession.createTextMessage();
+        message.setText("message");
+        topicPublisher.publish(message);
 
-		// no message should be received because the connection is not started
-		Assert.assertFalse(signalReceived.await(5, TimeUnit.SECONDS));
+        // no message should be received because the connection is not started
+        Assert.assertFalse(signalReceived.await(5, TimeUnit.SECONDS));
 
-		// now we start the connection and expect to receive something
-		subscriberTopicConnection.start();
+        // now we start the connection and expect to receive something
+        subscriberTopicConnection.start();
 
-		Assert.assertTrue(signalReceived.await(5, TimeUnit.SECONDS));
-		Message receivedMessage = receivedMessagePlaceholder.iterator().next();
-		Assert.assertTrue(receivedMessage instanceof TextMessage);
-		Assert.assertEquals("message", ((TextMessage) receivedMessage).getText());
+        Assert.assertTrue(signalReceived.await(5, TimeUnit.SECONDS));
+        Message receivedMessage = receivedMessagePlaceholder.iterator().next();
+        Assert.assertTrue(receivedMessage instanceof TextMessage);
+        Assert.assertEquals("message", ((TextMessage) receivedMessage).getText());
 
-	}
+    }
 
-	@Test
-	public void testConnectionStop() throws Exception {
-		testTopicProducerConsumer();
-		TextMessage message = publisherTopicSession.createTextMessage("blah");
-		subscriberTopicConnection.close();
-		boolean cannotReceive = false;
-		try {
-			subscriber.receive();
-		} catch (IllegalStateException e) {
-			cannotReceive = true;
-		}
-		Assert.assertTrue(cannotReceive);
+    @Test
+    public void testConnectionStop() throws Exception {
+        testTopicProducerConsumer();
+        TextMessage message = publisherTopicSession.createTextMessage("blah");
+        subscriberTopicConnection.close();
+        boolean cannotReceive = false;
+        try {
+            subscriber.receive();
+        } catch (IllegalStateException e) {
+            cannotReceive = true;
+        }
+        Assert.assertTrue(cannotReceive);
 
-		publisherTopicConnection.close();
-		boolean cannotSend = false;
-		try {
-			topicPublisher.send(message);
-		} catch (IllegalStateException e) {
-			cannotSend = true;
-		}
-		Assert.assertTrue(cannotSend);
-	}
+        publisherTopicConnection.close();
+        boolean cannotSend = false;
+        try {
+            topicPublisher.send(message);
+        } catch (IllegalStateException e) {
+            cannotSend = true;
+        }
+        Assert.assertTrue(cannotSend);
+    }
 
 }

@@ -22,17 +22,17 @@ import org.apache.hedwig.client.conf.ClientConfiguration;
 import org.apache.hedwig.jms.FileURLHandler;
 
 /**
- * 
+ *
  * <u>NOTE:</u> The JMS spec indicate that a Connection encapsulates a
  * connection to a JMS provider, typically a TCP connection.
- * 
+ *
  * However, a connection may have multiple subscribers, which receive
  * <b>independent</b> copies of messages, that can be acknowledged
  * independently. In order to satisfy this behaviour, a JMS HedwigConnection
  * object may actually contain <b>several</b> hedwig clients, each maintaining
  * its own connection to the JMS provider.
- * 
- * 
+ *
+ *
  */
 public abstract class HedwigConnection implements Connection {
 

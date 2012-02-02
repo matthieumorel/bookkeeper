@@ -26,8 +26,8 @@ import javax.jms.JMSException;
 
 /**
  * An expression which performs an operation on two expression values
- * 
- * 
+ *
+ *
  */
 public abstract class UnaryExpression implements Expression {
 
@@ -226,7 +226,7 @@ public abstract class UnaryExpression implements Expression {
 
     /**
      * TODO: more efficient hashCode()
-     * 
+     *
      * @see java.lang.Object#hashCode()
      */
     public int hashCode() {
@@ -235,7 +235,7 @@ public abstract class UnaryExpression implements Expression {
 
     /**
      * TODO: more efficient hashCode()
-     * 
+     *
      * @see java.lang.Object#equals(java.lang.Object)
      */
     public boolean equals(Object o) {
@@ -250,7 +250,7 @@ public abstract class UnaryExpression implements Expression {
     /**
      * Returns the symbol that represents this binary expression. For example,
      * addition is represented by "+"
-     * 
+     *
      * @return
      */
     public abstract String getExpressionSymbol();

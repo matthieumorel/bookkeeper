@@ -21,8 +21,8 @@ import org.apache.hedwig.jms.administered.HedwigDestination;
 
 /**
  * Matches messages sent to an exact destination
- * 
- * 
+ *
+ *
  */
 public class SimpleDestinationFilter extends DestinationFilter {
 

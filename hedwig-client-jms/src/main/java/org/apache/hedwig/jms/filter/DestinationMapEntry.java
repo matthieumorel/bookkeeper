@@ -25,8 +25,8 @@ import org.apache.hedwig.jms.administered.HedwigTopic;
 /**
  * A base class for entry objects used to construct a destination based policy
  * map.
- * 
- * 
+ *
+ *
  * @org.apache.xbean.XBean
  */
 public abstract class DestinationMapEntry implements Comparable {
@@ -77,7 +77,7 @@ public abstract class DestinationMapEntry implements Comparable {
     }
 
     /**
-     * 
+     *
      * @throws Exception
      * @org.apache.xbean.InitMethod
      */

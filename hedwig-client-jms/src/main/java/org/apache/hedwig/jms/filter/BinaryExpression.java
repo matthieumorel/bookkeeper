@@ -20,8 +20,8 @@ package org.apache.hedwig.jms.filter;
 
 /**
  * An expression which performs an operation on two expression values.
- * 
- * 
+ *
+ *
  */
 public abstract class BinaryExpression implements Expression {
     protected Expression left;
@@ -92,5 +92,5 @@ public abstract class BinaryExpression implements Expression {
     public void setLeft(Expression expression) {
         left = expression;
     }
-    
+
 }

@@ -27,7 +27,7 @@ import com.google.protobuf.ByteString;
 /**
  * An implementation backed by a {@link Deque<Object>} which is serialized and
  * put in message body before send
- * 
+ *
  */
 public class HedwigJMSStreamMessage extends HedwigJMSMessage implements StreamMessage {
 
